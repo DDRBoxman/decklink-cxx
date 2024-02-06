@@ -4,11 +4,10 @@ use std::pin::Pin;
 use std::ptr::null;
 use std::{pin, ptr::null_mut};
 
-use crate::decklink_ffi::{IDeckLink, IDeckLinkIterator};
+use crate::decklink_ffi::{GetDisplayName, IDeckLink, IDeckLinkIterator};
 
 #[cxx::bridge]
 mod decklink_ffi {
-
     enum _BMDDeckLinkAPIInformationID {
         BMDDeckLinkAPIVersion = 0x76657273,
     }
@@ -36,6 +35,10 @@ mod decklink_ffi {
         unsafe fn GetInt(self: Pin<&mut IDeckLinkAPIInformation>, id: u32, value: *mut i64) -> i32;
 
         //unsafe fn GetModelName(self: Pin<&mut IDeckLink>, modelName: *const *const c_char) -> i32;
+
+        include!("decklink-cxx/include/bridge.h");
+
+        unsafe fn GetDisplayName(decklink: *mut IDeckLink) -> String;
     }
 }
 
@@ -63,7 +66,14 @@ fn main() {
 
         pin.Next(device_ptr);
 
-        let pin: Pin<&mut IDeckLink> = Pin::new_unchecked(device.as_mut().unwrap());
+        if device.is_null() {
+            println!("No device found. Please install device or drivers");
+            return;
+        }
+
+        let name = GetDisplayName(device);
+        println!("{}", name);
+        //let pin: Pin<&mut IDeckLink> = Pin::new_unchecked(device.as_mut().unwrap());
 
         /* pin.GetModelName();
 
