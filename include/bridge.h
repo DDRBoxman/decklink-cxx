@@ -1,6 +1,10 @@
-#include "decklink-cxx/decklink/Mac/include/DeckLinkAPI.h"
+#pragma once
+
+struct RustOutputCallback;
+
 #include <CoreFoundation/CoreFoundation.h>
 #include "rust/cxx.h"
+#include "decklink-cxx/src/main.rs.h"
 
 
 rust::String GetDisplayName(IDeckLink * deckLink) {
@@ -51,3 +55,6 @@ static void FillBlue(IDeckLinkMutableVideoFrame* theFrame)
 void Release(IUnknown *obj) {
     obj->Release();
 }
+
+CXXOutputCallback* new_output_callback(RustOutputCallback *callback);
+

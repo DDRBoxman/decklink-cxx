@@ -1,8 +1,14 @@
-use std::{pin::Pin, process::Output};
-use crate::decklink_ffi::{FillBlue, GetDisplayName, GetOutput, IDeckLink, IDeckLinkIterator};
+use std::{pin::Pin, process::Output, thread, time};
+use crate::decklink_ffi::{new_output_callback, FillBlue, GetDisplayName, GetOutput, IDeckLink, IDeckLinkIterator};
 
 #[cxx::bridge]
 mod decklink_ffi {
+    extern "Rust" {
+        type RustOutputCallback;
+        fn scheduled_frame_completed(self: &RustOutputCallback);
+        fn scheduled_playback_has_stopped(self: &RustOutputCallback);
+    }
+
     enum _BMDDeckLinkAPIInformationID {
         BMDDeckLinkAPIVersion = 0x76657273,
     }
@@ -32,15 +38,28 @@ mod decklink_ffi {
         type IDeckLinkOutput;
         type IDeckLinkMutableVideoFrame;
         type IDeckLinkVideoFrame;
+        type IDeckLinkVideoOutputCallback;
 
         fn EnableVideoOutput(self: Pin<&mut IDeckLinkOutput>, displayMode: u32, outputFlags: u32) -> i32;
         fn StartScheduledPlayback(self: Pin<&mut IDeckLinkOutput>, playbackStartTime: i64, timeScale: i64, playbackSpeed: f64) -> i32;
+        unsafe fn StopScheduledPlayback (self: Pin<&mut IDeckLinkOutput>, stopPlaybackAtTime: i64, actualStopTime: *mut i64, timeScale: i64) -> i32;
+
         unsafe fn ScheduleVideoFrame(self: Pin<&mut IDeckLinkOutput>, frame: *mut IDeckLinkVideoFrame, displayTime: i64, displayDuration: i64, timeScale: i64) -> i32;
         unsafe fn CreateVideoFrame(self: Pin<&mut IDeckLinkOutput>, width: i32, height: i32, row_bytes: i32, pixel_format: u32, flags: u32, frame: *mut *mut IDeckLinkMutableVideoFrame) -> i32;
 
+        unsafe fn SetScheduledFrameCompletionCallback(self: Pin<&mut IDeckLinkOutput>, output: *mut IDeckLinkVideoOutputCallback) -> i32;
+
         type IUnknown;
 
+        type CXXOutputCallback;
+
+        include!("decklink-cxx/include/test.h");
+
+        include!("decklink-cxx/include/callback.h");
+
         include!("decklink-cxx/include/bridge.h");
+
+        unsafe fn new_output_callback(callback: *mut RustOutputCallback) -> *mut CXXOutputCallback;
 
         unsafe fn GetDisplayName(decklink: *mut IDeckLink) -> String;
 
@@ -49,6 +68,19 @@ mod decklink_ffi {
         unsafe fn FillBlue(frame: *mut IDeckLinkMutableVideoFrame);
 
         unsafe fn Release(obj: *mut IUnknown);
+    }
+}
+
+pub struct RustOutputCallback {
+}
+
+impl RustOutputCallback {
+    fn scheduled_frame_completed(self: &RustOutputCallback) {
+        println!("COMPLETED");
+    }
+
+    fn scheduled_playback_has_stopped(self: &RustOutputCallback) {
+        println!("STOPPED");
     }
 }
 
@@ -88,10 +120,13 @@ fn main() {
         println!("{:p}", output);
 
         let mut pin: Pin<&mut decklink_ffi::IDeckLinkOutput> = Pin::new_unchecked(output.as_mut().unwrap());
+
+        let mut rust_callback = RustOutputCallback{};
+        let output_callback = new_output_callback(&mut rust_callback as *mut RustOutputCallback);
+        pin.as_mut().SetScheduledFrameCompletionCallback(output_callback as *mut decklink_ffi::IDeckLinkVideoOutputCallback);
+ 
         pin.as_mut().EnableVideoOutput(0x48703630, 0);
         //println!("{}", output.);
-
-        let mut i = 0;
 
         for i in 0..20 {
             let mut frame: *mut decklink_ffi::IDeckLinkMutableVideoFrame = std::ptr::null_mut();
@@ -108,8 +143,14 @@ fn main() {
             decklink_ffi::Release(frame as *mut decklink_ffi::IUnknown);
         }
 
-        let result = pin.as_mut().StartScheduledPlayback(0, 25000, 0.2);
+        let result = pin.as_mut().StartScheduledPlayback(0, 25000, 1.0);
         println!("{}", result);
+
+        let onesec = time::Duration::from_millis(1000);
+
+        thread::sleep(onesec);
+
+        pin.as_mut().StopScheduledPlayback(0,std::ptr::null_mut(),25000);
 
     }
 }
