@@ -2,6 +2,41 @@
 
 #include <iostream>
 
+HRESULT CXXInputCallback::VideoInputFormatChanged (BMDVideoInputFormatChangedEvents notificationEvents, IDeckLinkDisplayMode* newDisplayMode, BMDDetectedVideoInputFormatFlags detectedSignalFlags) {
+    this->callback->video_input_format_changed();
+    return S_OK;
+}
+
+HRESULT CXXInputCallback::VideoInputFrameArrived(IDeckLinkVideoInputFrame* videoFrame, IDeckLinkAudioInputPacket* audioPacket) {
+    this->callback->video_input_frame_arrived();
+    return S_OK;
+}
+
+HRESULT	STDMETHODCALLTYPE CXXInputCallback::QueryInterface (REFIID iid, LPVOID *ppv)
+{
+    *ppv = NULL;
+    return E_NOINTERFACE;
+}
+
+ULONG STDMETHODCALLTYPE CXXInputCallback::AddRef()
+{
+    return ++m_refCount;
+}
+
+ULONG STDMETHODCALLTYPE CXXInputCallback::Release()
+{
+    ULONG newRefValue = --m_refCount;
+    if (newRefValue == 0)
+        delete this;
+    
+    return newRefValue;
+}
+
+CXXInputCallback* new_input_callback(RustInputCallback *callback) {
+  return new CXXInputCallback(callback);
+}
+
+
 HRESULT CXXOutputCallback::ScheduledFrameCompleted(IDeckLinkVideoFrame* completedFrame, BMDOutputFrameCompletionResult result) {
     this->callback->scheduled_frame_completed();
     return S_OK;

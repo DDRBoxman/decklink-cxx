@@ -1,5 +1,6 @@
 #pragma once
 
+struct RustInputCallback;
 struct RustOutputCallback;
 
 #include <CoreFoundation/CoreFoundation.h>
@@ -7,7 +8,7 @@ struct RustOutputCallback;
 #include "decklink-cxx/src/main.rs.h"
 
 
-rust::String GetDisplayName(IDeckLink * deckLink) {
+rust::String GetDisplayName(IDeckLink *deckLink) {
     CFStringRef name;
     deckLink->GetDisplayName(&name);
 
@@ -17,6 +18,22 @@ rust::String GetDisplayName(IDeckLink * deckLink) {
 	if (CFStringGetCString(name, stringBuffer, stringSize, kCFStringEncodingUTF8))
 		returnString = stringBuffer;
 	return returnString;
+}
+
+rust::String GetDisplayModeName(IDeckLinkDisplayMode *displayMode) {
+	CFStringRef name;
+    displayMode->GetName(&name);
+
+    std::string returnString("");
+	CFIndex stringSize = CFStringGetLength(name) + 1;
+	char stringBuffer[stringSize];
+	if (CFStringGetCString(name, stringBuffer, stringSize, kCFStringEncodingUTF8))
+		returnString = stringBuffer;
+	return returnString;
+}
+
+HRESULT GetInput(IDeckLink * deckLink, IDeckLinkInput** deckLinkInput) {
+    return deckLink->QueryInterface(IID_IDeckLinkInput, (void**)deckLinkInput);
 }
 
 HRESULT GetOutput(IDeckLink * deckLink, IDeckLinkOutput** deckLinkOutput) {
@@ -55,6 +72,8 @@ static void FillBlue(IDeckLinkMutableVideoFrame* theFrame)
 void Release(IUnknown *obj) {
     obj->Release();
 }
+
+CXXInputCallback* new_input_callback(RustInputCallback *callback);
 
 CXXOutputCallback* new_output_callback(RustOutputCallback *callback);
 
