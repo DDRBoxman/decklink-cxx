@@ -8,7 +8,7 @@ HRESULT CXXInputCallback::VideoInputFormatChanged (BMDVideoInputFormatChangedEve
 }
 
 HRESULT CXXInputCallback::VideoInputFrameArrived(IDeckLinkVideoInputFrame* videoFrame, IDeckLinkAudioInputPacket* audioPacket) {
-    this->callback->video_input_frame_arrived();
+    this->callback->video_input_frame_arrived(videoFrame);
     return S_OK;
 }
 
@@ -35,7 +35,6 @@ ULONG STDMETHODCALLTYPE CXXInputCallback::Release()
 CXXInputCallback* new_input_callback(RustInputCallback *callback) {
   return new CXXInputCallback(callback);
 }
-
 
 HRESULT CXXOutputCallback::ScheduledFrameCompleted(IDeckLinkVideoFrame* completedFrame, BMDOutputFrameCompletionResult result) {
     this->callback->scheduled_frame_completed();

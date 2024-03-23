@@ -5,7 +5,7 @@ struct RustOutputCallback;
 
 #include <CoreFoundation/CoreFoundation.h>
 #include "rust/cxx.h"
-#include "decklink-cxx/src/main.rs.h"
+#include "decklink-cxx/src/bridge.rs.h"
 
 
 rust::String GetDisplayName(IDeckLink *deckLink) {
@@ -38,6 +38,10 @@ HRESULT GetInput(IDeckLink * deckLink, IDeckLinkInput** deckLinkInput) {
 
 HRESULT GetOutput(IDeckLink * deckLink, IDeckLinkOutput** deckLinkOutput) {
     return deckLink->QueryInterface(IID_IDeckLinkOutput, (void**)deckLinkOutput);
+}
+
+HRESULT GetAncillaryPackets(IDeckLinkVideoFrame *videoFrame, IDeckLinkVideoFrameAncillaryPackets** videoFrameAncillaryPackets) {
+	return videoFrame->QueryInterface(IID_IDeckLinkVideoFrame, (void**)videoFrameAncillaryPackets);
 }
 
 const uint32_t kFrameDuration = 1000;
