@@ -1,6 +1,5 @@
 use std::pin::Pin;
 
-
 mod decklink_type_wrappers {
     use std::fmt;
 
@@ -14,10 +13,20 @@ mod decklink_type_wrappers {
             write!(f, "{}", self.0)
         }
     }
+
+    #[derive(Debug, Eq, Clone, PartialEq, Hash)]
+    #[allow(non_camel_case_types)]
+    #[repr(transparent)]
+    pub struct c_ulong(pub ::std::os::raw::c_ulong);
 }
 
 unsafe impl cxx::ExternType for decklink_type_wrappers::c_long {
     type Id = cxx::type_id!("c_long");
+    type Kind = cxx::kind::Trivial;
+}
+
+unsafe impl cxx::ExternType for decklink_type_wrappers::c_ulong {
+    type Id = cxx::type_id!("c_ulong");
     type Kind = cxx::kind::Trivial;
 }
 
@@ -61,6 +70,7 @@ pub mod decklink_ffi {
         fn CreateDeckLinkAPIInformationInstance() -> *mut IDeckLinkAPIInformation;
 
         unsafe fn GetInt(self: Pin<&mut IDeckLinkAPIInformation>, id: u32, value: *mut i64) -> i32;
+        fn Release(self: Pin<&mut IDeckLinkAPIInformation>) -> c_ulong;
 
         type IDeckLinkInput;
         type IDeckLinkDisplayModeIterator;
@@ -119,11 +129,19 @@ pub mod decklink_ffi {
         type IDeckLinkAncillaryPacket;
         type IDeckLinkAncillaryPacketIterator;
 
-        unsafe fn GetPacketIterator(self: Pin<&mut IDeckLinkVideoFrameAncillaryPackets>, iterator: *mut *mut IDeckLinkAncillaryPacketIterator) -> i32;
-        unsafe fn AttachPacket(self: Pin<&mut IDeckLinkVideoFrameAncillaryPackets>, packet: *mut IDeckLinkAncillaryPacket) -> i32;
-        unsafe fn DetachPacket(self: Pin<&mut IDeckLinkVideoFrameAncillaryPackets>, packet: *mut IDeckLinkAncillaryPacket) -> i32;
+        unsafe fn GetPacketIterator(
+            self: Pin<&mut IDeckLinkVideoFrameAncillaryPackets>,
+            iterator: *mut *mut IDeckLinkAncillaryPacketIterator,
+        ) -> i32;
+        unsafe fn AttachPacket(
+            self: Pin<&mut IDeckLinkVideoFrameAncillaryPackets>,
+            packet: *mut IDeckLinkAncillaryPacket,
+        ) -> i32;
+        unsafe fn DetachPacket(
+            self: Pin<&mut IDeckLinkVideoFrameAncillaryPackets>,
+            packet: *mut IDeckLinkAncillaryPacket,
+        ) -> i32;
         fn DetachAllPackets(self: Pin<&mut IDeckLinkVideoFrameAncillaryPackets>) -> i32;
-
 
         fn GetWidth(self: Pin<&mut IDeckLinkVideoFrame>) -> c_long;
         fn GetHeight(self: Pin<&mut IDeckLinkVideoFrame>) -> c_long;
@@ -173,6 +191,8 @@ pub mod decklink_ffi {
 
         type IUnknown;
 
+        fn Release(self: Pin<&mut IUnknown>) -> c_ulong;
+
         type CXXInputCallback;
 
         type CXXOutputCallback;
@@ -195,13 +215,17 @@ pub mod decklink_ffi {
 
         unsafe fn GetOutput(decklink: *mut IDeckLink, output: *mut *mut IDeckLinkOutput) -> i32;
 
-        unsafe fn GetAncillaryPackets(videoFrame: *mut IDeckLinkVideoFrame, videoFrameAncillaryPackets: *mut *mut IDeckLinkVideoFrameAncillaryPackets) -> i32;
+        unsafe fn GetAncillaryPackets(
+            videoFrame: *mut IDeckLinkVideoFrame,
+            videoFrameAncillaryPackets: *mut *mut IDeckLinkVideoFrameAncillaryPackets,
+        ) -> i32;
 
         unsafe fn FillBlue(frame: *mut IDeckLinkMutableVideoFrame);
 
         unsafe fn Release(obj: *mut IUnknown);
 
         type c_long = crate::bridge::decklink_type_wrappers::c_long;
+        type c_ulong = crate::bridge::decklink_type_wrappers::c_ulong;
     }
 }
 

@@ -7,7 +7,6 @@ struct RustOutputCallback;
 #include "rust/cxx.h"
 #include "decklink-cxx/src/bridge.rs.h"
 
-
 rust::String GetDisplayName(IDeckLink *deckLink) {
     CFStringRef name;
     deckLink->GetDisplayName(&name);

@@ -1,4 +1,4 @@
-mod bridge;
+/*mod bridge;
 
 use bridge::decklink_ffi;
 
@@ -9,16 +9,6 @@ use crate::bridge::decklink_ffi::{
 use std::{pin::Pin, ptr::null_mut, thread, time};
 
 fn main() {
-    let api_info = decklink_ffi::CreateDeckLinkAPIInformationInstance();
-    unsafe {
-        let pin: Pin<&mut decklink_ffi::IDeckLinkAPIInformation> =
-            Pin::new_unchecked(api_info.as_mut().unwrap());
-        let mut val: i64 = 0;
-
-        pin.GetInt(0x76657273, &mut val as *mut i64);
-        println!("{}", val);
-    }
-
     let iterator: *mut IDeckLinkIterator = decklink_ffi::CreateDeckLinkIteratorInstance();
 
     unsafe {
@@ -79,8 +69,9 @@ fn main() {
         }
 
         let mut rust_callback = crate::bridge::RustInputCallback {};
-        let input_callback =
-            decklink_ffi::new_input_callback(&mut rust_callback as *mut crate::bridge::RustInputCallback);
+        let input_callback = decklink_ffi::new_input_callback(
+            &mut rust_callback as *mut crate::bridge::RustInputCallback,
+        );
         pin.as_mut()
             .SetCallback(input_callback as *mut decklink_ffi::IDeckLinkInputCallback);
 
@@ -99,7 +90,8 @@ fn main() {
             Pin::new_unchecked(output.as_mut().unwrap());
 
         let mut rust_callback = crate::bridge::RustOutputCallback {};
-        let output_callback = new_output_callback(&mut rust_callback as *mut crate::bridge::RustOutputCallback);
+        let output_callback =
+            new_output_callback(&mut rust_callback as *mut crate::bridge::RustOutputCallback);
         pin.as_mut().SetScheduledFrameCompletionCallback(
             output_callback as *mut decklink_ffi::IDeckLinkVideoOutputCallback,
         );
@@ -146,7 +138,8 @@ fn main() {
 
         thread::sleep(onesec);
     }
-}
+}*/
+
 
 /*
 const uint32_t kFrameDuration = 1000;
