@@ -49,12 +49,41 @@ pub mod decklink_ffi {
         BMDDeckLinkAPIVersion = 0x76657273,
     }
 
+    enum _BMDPixelFormat {
+        bmdFormatUnspecified = 0,
+        bmdFormat8BitYUV = 0x32767579,
+        bmdFormat10BitYUV = 0x76323130,
+        bmdFormat8BitARGB = 32,
+        bmdFormat8BitBGRA = 0x42475241,
+        bmdFormat10BitRGB = 0x72323130, // Big-endian RGB 10-bit per component with SMPTE video levels (64-940). Packed as 2:10:10:10
+        bmdFormat12BitRGB = 0x52313242, // Big-endian RGB 12-bit per component with full range (0-4095). Packed as 12-bit per component
+        bmdFormat12BitRGBLE = 0x5231324C, // Little-endian RGB 12-bit per component with full range (0-4095). Packed as 12-bit per component
+        bmdFormat10BitRGBXLE = 0x5231306C, // Little-endian 10-bit RGB with SMPTE video levels (64-940)
+        bmdFormat10BitRGBX = 0x52313062,   // Big-endian 10-bit RGB with SMPTE video levels (64-940)
+        bmdFormatH265 = 0x68657631,        // High Efficiency Video Coding (HEVC/h.265)
+
+        /* AVID DNxHR */
+        bmdFormatDNxHR = 0x41566468,
+    }
+
     unsafe extern "C++" {
         include!("decklink-cxx/decklink/Mac/include/DeckLinkAPI.h");
+
+        type IDeckLinkAPIInformation;
+
+        type _BMDDeckLinkAPIInformationID;
+        type _BMDPixelFormat;
+
+        fn CreateDeckLinkAPIInformationInstance() -> *mut IDeckLinkAPIInformation;
+
+        unsafe fn GetInt(self: Pin<&mut IDeckLinkAPIInformation>, id: u32, value: *mut i64) -> i32;
+        fn Release(self: Pin<&mut IDeckLinkAPIInformation>) -> c_ulong;
 
         type IDeckLinkIterator;
 
         type IDeckLink;
+
+        fn Release(self: Pin<&mut IDeckLink>) -> c_ulong;
 
         fn CreateDeckLinkIteratorInstance() -> *mut IDeckLinkIterator;
 
@@ -63,14 +92,7 @@ pub mod decklink_ffi {
             deckLinkInstance: *mut *mut IDeckLink,
         ) -> i32;
 
-        type IDeckLinkAPIInformation;
-
-        type _BMDDeckLinkAPIInformationID;
-
-        fn CreateDeckLinkAPIInformationInstance() -> *mut IDeckLinkAPIInformation;
-
-        unsafe fn GetInt(self: Pin<&mut IDeckLinkAPIInformation>, id: u32, value: *mut i64) -> i32;
-        fn Release(self: Pin<&mut IDeckLinkAPIInformation>) -> c_ulong;
+        fn Release(self: Pin<&mut IDeckLinkIterator>) -> c_ulong;
 
         type IDeckLinkInput;
         type IDeckLinkDisplayModeIterator;
