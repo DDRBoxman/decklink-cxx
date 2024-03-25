@@ -9,24 +9,7 @@ use crate::bridge::decklink_ffi::{
 use std::{pin::Pin, ptr::null_mut, thread, time};
 
 fn main() {
-    let iterator: *mut IDeckLinkIterator = decklink_ffi::CreateDeckLinkIteratorInstance();
-
     unsafe {
-        let pin: Pin<&mut IDeckLinkIterator> = Pin::new_unchecked(iterator.as_mut().unwrap());
-
-        let mut device: *mut IDeckLink = std::ptr::null_mut();
-        let device_ptr: *mut *mut IDeckLink = &mut device;
-
-        pin.Next(device_ptr);
-
-        if device.is_null() {
-            println!("No device found. Please install device or drivers");
-            return;
-        }
-
-        let name = GetDisplayName(device);
-        println!("{}", name);
-
         let mut input: *mut decklink_ffi::IDeckLinkInput = std::ptr::null_mut();
         let input_ptr: *mut *mut decklink_ffi::IDeckLinkInput = &mut input;
         let result = GetInput(device, input_ptr);
@@ -80,14 +63,8 @@ fn main() {
 
         pin.as_mut().StartStreams();
 
-        let mut output: *mut decklink_ffi::IDeckLinkOutput = std::ptr::null_mut();
-        let output_ptr: *mut *mut decklink_ffi::IDeckLinkOutput = &mut output;
-        let result = GetOutput(device, output_ptr);
-        println!("{}", result);
-        println!("{:p}", output);
+ 
 
-        let mut pin: Pin<&mut decklink_ffi::IDeckLinkOutput> =
-            Pin::new_unchecked(output.as_mut().unwrap());
 
         let mut rust_callback = crate::bridge::RustOutputCallback {};
         let output_callback =
@@ -96,35 +73,8 @@ fn main() {
             output_callback as *mut decklink_ffi::IDeckLinkVideoOutputCallback,
         );
 
-        pin.as_mut().EnableVideoOutput(0x48703630, 0);
-        //println!("{}", output.);
 
-        for i in 0..20 {
-            let mut frame: *mut decklink_ffi::IDeckLinkMutableVideoFrame = std::ptr::null_mut();
-            let frame_ptr: *mut *mut decklink_ffi::IDeckLinkMutableVideoFrame = &mut frame;
-            let result = pin.as_mut().CreateVideoFrame(
-                1920,
-                1080,
-                ((1920 + 47) / 48) * 128,
-                0x76323130,
-                0,
-                frame_ptr,
-            );
-            //println!("{}", result);
-            //println!("{:p}", frame);
-
-            FillBlue(frame);
-
-            let result = pin.as_mut().ScheduleVideoFrame(
-                frame as *mut decklink_ffi::IDeckLinkVideoFrame,
-                i * 1000,
-                1000,
-                25000,
-            );
-            println!("schedule {}", result);
-
-            decklink_ffi::Release(frame as *mut decklink_ffi::IUnknown);
-        }
+ 
 
         let result = pin.as_mut().StartScheduledPlayback(0, 25000, 1.0);
         println!("{}", result);
