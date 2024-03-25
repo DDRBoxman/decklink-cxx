@@ -2,7 +2,7 @@ mod bridge;
 
 use bridge::decklink_ffi;
 
-use std::{default, pin::Pin, process::Output};
+use std::pin::Pin;
 
 pub struct DecklinkAPIInformation<'a> {
     api_info: Pin<&'a mut decklink_ffi::IDeckLinkAPIInformation>,
@@ -93,6 +93,16 @@ impl DecklinkDevice<'_> {
             output: unsafe { Pin::new_unchecked(output.as_mut().unwrap()) },
         };
     }
+
+    pub fn get_input(&self) -> DecklinkInput {
+        let mut input: *mut decklink_ffi::IDeckLinkInput = std::ptr::null_mut();
+        let input_ptr: *mut *mut decklink_ffi::IDeckLinkInput = &mut input;
+        let result = unsafe { decklink_ffi::GetInput(self.device_raw, input_ptr) };
+
+        return DecklinkInput {
+            input: unsafe { Pin::new_unchecked(input.as_mut().unwrap()) },
+        };
+    }
 }
 
 impl Drop for DecklinkDevice<'_> {
@@ -174,6 +184,18 @@ impl DecklinkOutput<'_> {
             )
         };
     }
+
+    pub fn set_scheduled_frame_completion_callback(&mut self) {
+        let mut rust_callback = crate::bridge::RustOutputCallback {};
+        unsafe {
+            let output_callback = decklink_ffi::new_output_callback(
+                &mut rust_callback as *mut crate::bridge::RustOutputCallback,
+            );
+            self.output.as_mut().SetScheduledFrameCompletionCallback(
+                output_callback as *mut decklink_ffi::IDeckLinkVideoOutputCallback,
+            );
+        }
+    }
 }
 
 impl Drop for DecklinkOutput<'_> {
@@ -195,6 +217,51 @@ impl DecklinkVideoFrame {
 impl Drop for DecklinkVideoFrame {
     fn drop(&mut self) {
         unsafe { decklink_ffi::Release(self.frame as *mut decklink_ffi::IUnknown) }
+    }
+}
+
+pub struct DecklinkInput<'a> {
+    input: Pin<&'a mut decklink_ffi::IDeckLinkInput>,
+}
+
+impl DecklinkInput<'_> {
+    pub fn enable_video_input(
+        &mut self,
+        display_mode: BMDDisplayMode,
+        pixel_format: BMDPixelFormat,
+        output_flags: u32,
+    ) {
+        self.input
+            .as_mut()
+            .EnableVideoInput(display_mode.repr, pixel_format.repr, output_flags);
+    }
+
+    pub fn start_streams(&mut self) {
+        self.input.as_mut().StartStreams();
+    }
+
+    pub fn stop_streams(&mut self) {
+        self.input.as_mut().StopStreams();
+    }
+
+    pub fn set_callback(&mut self) {
+        let mut rust_callback = crate::bridge::RustInputCallback {};
+        let input_callback = unsafe {
+            decklink_ffi::new_input_callback(
+                &mut rust_callback as *mut crate::bridge::RustInputCallback,
+            )
+        };
+        unsafe {
+            self.input
+                .as_mut()
+                .SetCallback(input_callback as *mut decklink_ffi::IDeckLinkInputCallback)
+        };
+    }
+}
+
+impl Drop for DecklinkInput<'_> {
+    fn drop(&mut self) {
+        self.input.as_mut().Release();
     }
 }
 

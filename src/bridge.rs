@@ -273,6 +273,7 @@ pub mod decklink_ffi {
         ) -> i32;
         fn StartStreams(self: Pin<&mut IDeckLinkInput>) -> i32;
         fn StopStreams(self: Pin<&mut IDeckLinkInput>) -> i32;
+        fn Release(self: Pin<&mut IDeckLinkInput>) -> c_ulong;
 
         unsafe fn SetCallback(
             self: Pin<&mut IDeckLinkInput>,
