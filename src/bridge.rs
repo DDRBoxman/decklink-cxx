@@ -1,12 +1,41 @@
 use std::pin::Pin;
 
-mod decklink_type_wrappers {
+macro_rules! ctype_wrapper {
+    ($r:ident, $c:expr) => {
+        /// Newtype wrapper for a `$c`
+        #[derive(Debug, Eq, Clone, PartialEq, Hash)]
+        #[allow(non_camel_case_types)]
+        #[repr(transparent)]
+        pub struct $r(pub ::std::os::raw::$r);
+
+        unsafe impl cxx::ExternType for $r {
+            type Id = cxx::type_id!($c);
+            type Kind = cxx::kind::Trivial;
+        }
+    };
+}
+
+macro_rules! bridge_type_wrapper {
+    ($r:ident, $c:expr, $t:ident) => {
+        /// Newtype wrapper for a `$c`
+        #[derive(Debug, Eq, Clone, PartialEq, Hash)]
+        #[allow(non_camel_case_types)]
+        #[repr(transparent)]
+        pub struct $r(pub $t);
+
+        unsafe impl cxx::ExternType for $r {
+            type Id = cxx::type_id!($c);
+            type Kind = cxx::kind::Trivial;
+        }
+    };
+}
+
+pub(crate) mod decklink_type_wrappers {
     use std::fmt;
 
-    #[derive(Debug, Eq, Clone, PartialEq, Hash)]
-    #[allow(non_camel_case_types)]
-    #[repr(transparent)]
-    pub struct c_long(pub ::std::os::raw::c_long);
+    ctype_wrapper!(c_long, "c_long");
+    ctype_wrapper!(c_ulong, "c_ulong");
+    ctype_wrapper!(c_longlong, "c_longlong");
 
     impl fmt::Display for c_long {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -14,20 +43,17 @@ mod decklink_type_wrappers {
         }
     }
 
-    #[derive(Debug, Eq, Clone, PartialEq, Hash)]
-    #[allow(non_camel_case_types)]
-    #[repr(transparent)]
-    pub struct c_ulong(pub ::std::os::raw::c_ulong);
-}
+    bridge_type_wrapper!(c_hresult, "c_hresult", i32);
 
-unsafe impl cxx::ExternType for decklink_type_wrappers::c_long {
-    type Id = cxx::type_id!("c_long");
-    type Kind = cxx::kind::Trivial;
-}
-
-unsafe impl cxx::ExternType for decklink_type_wrappers::c_ulong {
-    type Id = cxx::type_id!("c_ulong");
-    type Kind = cxx::kind::Trivial;
+    bridge_type_wrapper!(
+        c_BMDDeckLinkAPIInformationID,
+        "c_BMDDeckLinkAPIInformationID",
+        u32
+    );
+    bridge_type_wrapper!(c_BMDDisplayMode, "c_BMDDisplayMode", u32);
+    bridge_type_wrapper!(c_BMDPixelFormat, "c_BMDPixelFormat", u32);
+    bridge_type_wrapper!(c_BMDVideoInputFlags, "c_BMDVideoInputFlags", u32);
+    bridge_type_wrapper!(c_BMDVideoOutputFlags, "c_BMDVideoOutputFlags", u32);
 }
 
 #[cxx::bridge]
@@ -202,17 +228,24 @@ pub mod decklink_ffi {
     }
 
     unsafe extern "C++" {
-        include!("decklink-cxx/decklink/Mac/include/DeckLinkAPI.h");
+        include!("decklink-cxx/include/platform.h");
 
         type IDeckLinkAPIInformation;
 
         type _BMDDeckLinkAPIInformationID;
+        type BMDDeckLinkAPIInformationID;
         type _BMDPixelFormat;
+        type BMDPixelFormat;
         type _BMDDisplayMode;
+        type BMDDisplayMode;
 
         fn CreateDeckLinkAPIInformationInstance() -> *mut IDeckLinkAPIInformation;
 
-        unsafe fn GetInt(self: Pin<&mut IDeckLinkAPIInformation>, id: u32, value: *mut i64) -> i32;
+        unsafe fn GetInt(
+            self: Pin<&mut IDeckLinkAPIInformation>,
+            id: c_BMDDeckLinkAPIInformationID,
+            value: *mut c_longlong,
+        ) -> c_hresult;
         fn Release(self: Pin<&mut IDeckLinkAPIInformation>) -> c_ulong;
 
         type IDeckLinkIterator;
@@ -226,7 +259,7 @@ pub mod decklink_ffi {
         unsafe fn Next(
             self: Pin<&mut IDeckLinkIterator>,
             deckLinkInstance: *mut *mut IDeckLink,
-        ) -> i32;
+        ) -> c_hresult;
 
         fn Release(self: Pin<&mut IDeckLinkIterator>) -> c_ulong;
 
@@ -239,46 +272,46 @@ pub mod decklink_ffi {
         unsafe fn GetDisplayModeIterator(
             self: Pin<&mut IDeckLinkInput>,
             iterator: *mut *mut IDeckLinkDisplayModeIterator,
-        ) -> i32;
+        ) -> c_hresult;
 
         unsafe fn Next(
             self: Pin<&mut IDeckLinkDisplayModeIterator>,
             deckLinkDisplayMode: *mut *mut IDeckLinkDisplayMode,
-        ) -> i32;
+        ) -> c_hresult;
 
-        fn GetDisplayMode(self: Pin<&mut IDeckLinkDisplayMode>) -> u32;
+        fn GetDisplayMode(self: Pin<&mut IDeckLinkDisplayMode>) -> c_BMDDisplayMode;
         fn GetWidth(self: Pin<&mut IDeckLinkDisplayMode>) -> c_long;
         fn GetHeight(self: Pin<&mut IDeckLinkDisplayMode>) -> c_long;
         unsafe fn GetFrameRate(
             self: Pin<&mut IDeckLinkDisplayMode>,
-            frameDuration: *mut i64,
-            timeScale: *mut i64,
-        ) -> i32;
+            frameDuration: *mut c_longlong,
+            timeScale: *mut c_longlong,
+        ) -> c_hresult;
 
-        unsafe fn DoesSupportVideoMode(
+       /*  unsafe fn DoesSupportVideoMode(
             self: Pin<&mut IDeckLinkInput>,
             connection: u32,
             requestMode: u32,
-            requestedPixelFormat: u32,
+            requestedPixelFormat: c_BMDPixelFormat,
             conversionMode: u32,
             flags: u32,
             actualMode: *mut u32,
             supported: *mut bool,
-        ) -> i32;
+        ) -> c_hresult;*/
         fn EnableVideoInput(
             self: Pin<&mut IDeckLinkInput>,
-            displayMode: u32,
-            pixelFormat: u32,
-            flags: u32,
-        ) -> i32;
-        fn StartStreams(self: Pin<&mut IDeckLinkInput>) -> i32;
-        fn StopStreams(self: Pin<&mut IDeckLinkInput>) -> i32;
+            displayMode: c_BMDDisplayMode,
+            pixelFormat: c_BMDPixelFormat,
+            flags: c_BMDVideoInputFlags,
+        ) -> c_hresult;
+        fn StartStreams(self: Pin<&mut IDeckLinkInput>) -> c_hresult;
+        fn StopStreams(self: Pin<&mut IDeckLinkInput>) -> c_hresult;
         fn Release(self: Pin<&mut IDeckLinkInput>) -> c_ulong;
 
         unsafe fn SetCallback(
             self: Pin<&mut IDeckLinkInput>,
             callback: *mut IDeckLinkInputCallback,
-        ) -> i32;
+        ) -> c_hresult;
 
         type IDeckLinkOutput;
         type IDeckLinkMutableVideoFrame;
@@ -291,62 +324,62 @@ pub mod decklink_ffi {
         unsafe fn GetPacketIterator(
             self: Pin<&mut IDeckLinkVideoFrameAncillaryPackets>,
             iterator: *mut *mut IDeckLinkAncillaryPacketIterator,
-        ) -> i32;
+        ) -> c_hresult;
         unsafe fn AttachPacket(
             self: Pin<&mut IDeckLinkVideoFrameAncillaryPackets>,
             packet: *mut IDeckLinkAncillaryPacket,
-        ) -> i32;
+        ) -> c_hresult;
         unsafe fn DetachPacket(
             self: Pin<&mut IDeckLinkVideoFrameAncillaryPackets>,
             packet: *mut IDeckLinkAncillaryPacket,
-        ) -> i32;
-        fn DetachAllPackets(self: Pin<&mut IDeckLinkVideoFrameAncillaryPackets>) -> i32;
+        ) -> c_hresult;
+        fn DetachAllPackets(self: Pin<&mut IDeckLinkVideoFrameAncillaryPackets>) -> c_hresult;
 
         fn GetWidth(self: Pin<&mut IDeckLinkVideoFrame>) -> c_long;
         fn GetHeight(self: Pin<&mut IDeckLinkVideoFrame>) -> c_long;
         fn GetRowBytes(self: Pin<&mut IDeckLinkVideoFrame>) -> c_long;
 
-        //fn GetBytes (self: Pin<&mut IDeckLinkVideoFrame>, *mut *mut void) -> i32;
+        //fn GetBytes (self: Pin<&mut IDeckLinkVideoFrame>, *mut *mut void) -> c_hresult;
 
         fn EnableVideoOutput(
             self: Pin<&mut IDeckLinkOutput>,
-            displayMode: u32,
-            outputFlags: u32,
-        ) -> i32;
+            displayMode: c_BMDDisplayMode,
+            outputFlags: c_BMDVideoOutputFlags,
+        ) -> c_hresult;
         fn StartScheduledPlayback(
             self: Pin<&mut IDeckLinkOutput>,
-            playbackStartTime: i64,
-            timeScale: i64,
+            playbackStartTime: c_longlong,
+            timeScale: c_longlong,
             playbackSpeed: f64,
-        ) -> i32;
+        ) -> c_hresult;
         unsafe fn StopScheduledPlayback(
             self: Pin<&mut IDeckLinkOutput>,
-            stopPlaybackAtTime: i64,
-            actualStopTime: *mut i64,
+            stopPlaybackAtTime: c_longlong,
+            actualStopTime: *mut c_longlong,
             timeScale: i64,
-        ) -> i32;
+        ) -> c_hresult;
 
         unsafe fn ScheduleVideoFrame(
             self: Pin<&mut IDeckLinkOutput>,
             frame: *mut IDeckLinkVideoFrame,
-            displayTime: i64,
-            displayDuration: i64,
+            displayTime: c_longlong,
+            displayDuration: c_longlong,
             timeScale: i64,
-        ) -> i32;
+        ) -> c_hresult;
         unsafe fn CreateVideoFrame(
             self: Pin<&mut IDeckLinkOutput>,
             width: i32,
             height: i32,
             row_bytes: i32,
-            pixel_format: u32,
+            pixel_format: c_BMDPixelFormat,
             flags: u32,
             frame: *mut *mut IDeckLinkMutableVideoFrame,
-        ) -> i32;
+        ) -> c_hresult;
 
         unsafe fn SetScheduledFrameCompletionCallback(
             self: Pin<&mut IDeckLinkOutput>,
             output: *mut IDeckLinkVideoOutputCallback,
-        ) -> i32;
+        ) -> c_hresult;
 
         fn Release(self: Pin<&mut IDeckLinkOutput>) -> c_ulong;
 
@@ -372,14 +405,17 @@ pub mod decklink_ffi {
 
         unsafe fn GetDisplayModeName(displayMode: *mut IDeckLinkDisplayMode) -> String;
 
-        unsafe fn GetInput(decklink: *mut IDeckLink, input: *mut *mut IDeckLinkInput) -> i32;
+        unsafe fn GetInput(decklink: *mut IDeckLink, input: *mut *mut IDeckLinkInput) -> c_hresult;
 
-        unsafe fn GetOutput(decklink: *mut IDeckLink, output: *mut *mut IDeckLinkOutput) -> i32;
+        unsafe fn GetOutput(
+            decklink: *mut IDeckLink,
+            output: *mut *mut IDeckLinkOutput,
+        ) -> c_hresult;
 
         unsafe fn GetAncillaryPackets(
             videoFrame: *mut IDeckLinkVideoFrame,
             videoFrameAncillaryPackets: *mut *mut IDeckLinkVideoFrameAncillaryPackets,
-        ) -> i32;
+        ) -> c_hresult;
 
         unsafe fn FillBlue(frame: *mut IDeckLinkMutableVideoFrame);
 
@@ -387,6 +423,14 @@ pub mod decklink_ffi {
 
         type c_long = crate::bridge::decklink_type_wrappers::c_long;
         type c_ulong = crate::bridge::decklink_type_wrappers::c_ulong;
+        type c_longlong = crate::bridge::decklink_type_wrappers::c_longlong;
+        type c_hresult = crate::bridge::decklink_type_wrappers::c_hresult;
+        type c_BMDDeckLinkAPIInformationID =
+            crate::bridge::decklink_type_wrappers::c_BMDDeckLinkAPIInformationID;
+        type c_BMDDisplayMode = crate::bridge::decklink_type_wrappers::c_BMDDisplayMode;
+        type c_BMDPixelFormat = crate::bridge::decklink_type_wrappers::c_BMDPixelFormat;
+        type c_BMDVideoInputFlags = crate::bridge::decklink_type_wrappers::c_BMDVideoInputFlags;
+        type c_BMDVideoOutputFlags = crate::bridge::decklink_type_wrappers::c_BMDVideoOutputFlags;
     }
 }
 

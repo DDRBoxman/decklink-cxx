@@ -3,9 +3,27 @@
 struct RustInputCallback;
 struct RustOutputCallback;
 
-#include <CoreFoundation/CoreFoundation.h>
 #include "rust/cxx.h"
 #include "decklink-cxx/src/bridge.rs.h"
+
+#ifdef _WIN32
+#include <comdef.h>
+
+rust::String GetDisplayName(IDeckLink *deckLink) {
+    BSTR name;
+    deckLink->GetDisplayName(&name);
+
+	return _bstr_t(name, false);
+}
+
+rust::String GetDisplayModeName(IDeckLinkDisplayMode *displayMode) {
+	BSTR name;
+    displayMode->GetName(&name);
+
+    return _bstr_t(name, false);
+}
+#elif __APPLE__
+#include <CoreFoundation/CoreFoundation.h>
 
 rust::String GetDisplayName(IDeckLink *deckLink) {
     CFStringRef name;
@@ -30,6 +48,10 @@ rust::String GetDisplayModeName(IDeckLinkDisplayMode *displayMode) {
 		returnString = stringBuffer;
 	return returnString;
 }
+#elif __linux
+    
+#endif
+
 
 HRESULT GetInput(IDeckLink * deckLink, IDeckLinkInput** deckLinkInput) {
     return deckLink->QueryInterface(IID_IDeckLinkInput, (void**)deckLinkInput);

@@ -1,6 +1,6 @@
 mod bridge;
 
-use bridge::decklink_ffi;
+use bridge::{decklink_ffi, decklink_type_wrappers::c_BMDDeckLinkAPIInformationID};
 
 use std::pin::Pin;
 
@@ -19,14 +19,17 @@ impl DecklinkAPIInformation<'_> {
     }
 
     pub fn get_version(&mut self) -> i64 {
-        let mut val: i64 = 0;
+        let mut val = crate::bridge::decklink_type_wrappers::c_longlong(0);
         unsafe {
             self.api_info.as_mut().GetInt(
-                decklink_ffi::_BMDDeckLinkAPIInformationID::BMDDeckLinkAPIVersion.repr,
-                &mut val as *mut i64,
+                c_BMDDeckLinkAPIInformationID(
+                    decklink_ffi::_BMDDeckLinkAPIInformationID::BMDDeckLinkAPIVersion.repr,
+                ),
+                &mut val as *mut crate::bridge::decklink_type_wrappers::c_longlong,
             );
         }
-        return val;
+
+        return val.0;
     }
 }
 
@@ -117,9 +120,10 @@ pub struct DecklinkOutput<'a> {
 
 impl DecklinkOutput<'_> {
     pub fn enable_video_output(&mut self, display_mode: BMDDisplayMode, output_flags: u32) {
-        self.output
-            .as_mut()
-            .EnableVideoOutput(display_mode.repr, output_flags);
+        self.output.as_mut().EnableVideoOutput(
+            bridge::decklink_type_wrappers::c_BMDDisplayMode(display_mode.repr),
+            bridge::decklink_type_wrappers::c_BMDVideoOutputFlags(output_flags),
+        );
     }
 
     pub fn create_video_frame(
@@ -136,7 +140,7 @@ impl DecklinkOutput<'_> {
                 width,
                 height,
                 ((width + 47) / 48) * 128, // todo: it's silly decklink passes this can we do it ourself?
-                pixel_format.repr,
+                bridge::decklink_type_wrappers::c_BMDPixelFormat(pixel_format.repr),
                 0,
                 frame_ptr,
             )
@@ -155,8 +159,8 @@ impl DecklinkOutput<'_> {
         let result = unsafe {
             self.output.as_mut().ScheduleVideoFrame(
                 frame.frame as *mut decklink_ffi::IDeckLinkVideoFrame,
-                display_time,
-                display_duration,
+                crate::bridge::decklink_type_wrappers::c_longlong(display_time),
+                crate::bridge::decklink_type_wrappers::c_longlong(display_duration),
                 time_scale,
             )
         };
@@ -169,8 +173,8 @@ impl DecklinkOutput<'_> {
         playback_speed: f64,
     ) {
         self.output.as_mut().StartScheduledPlayback(
-            playback_start_time,
-            time_scale,
+            crate::bridge::decklink_type_wrappers::c_longlong(playback_start_time),
+            crate::bridge::decklink_type_wrappers::c_longlong(time_scale),
             playback_speed,
         );
     }
@@ -178,7 +182,7 @@ impl DecklinkOutput<'_> {
     pub fn stop_scheduled_playback(&mut self, stop_playback_at_time: i64, time_scale: i64) {
         unsafe {
             self.output.as_mut().StopScheduledPlayback(
-                stop_playback_at_time,
+                crate::bridge::decklink_type_wrappers::c_longlong(stop_playback_at_time),
                 std::ptr::null_mut(),
                 time_scale,
             )
@@ -229,11 +233,13 @@ impl DecklinkInput<'_> {
         &mut self,
         display_mode: BMDDisplayMode,
         pixel_format: BMDPixelFormat,
-        output_flags: u32,
+        input_flags: u32,
     ) {
-        self.input
-            .as_mut()
-            .EnableVideoInput(display_mode.repr, pixel_format.repr, output_flags);
+        self.input.as_mut().EnableVideoInput(
+            bridge::decklink_type_wrappers::c_BMDDisplayMode(display_mode.repr),
+            bridge::decklink_type_wrappers::c_BMDPixelFormat(pixel_format.repr),
+            bridge::decklink_type_wrappers::c_BMDVideoInputFlags(input_flags),
+        );
     }
 
     pub fn start_streams(&mut self) {
