@@ -7,7 +7,6 @@ edition = "2021"
 
 [dependencies]
 cxx = "1.0"
-core-foundation = "0.9.4"
 
 [build-dependencies]
 cxx-build = "1.0"
