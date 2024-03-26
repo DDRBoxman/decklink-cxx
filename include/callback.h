@@ -1,5 +1,5 @@
 #pragma once
-#include "decklink-cxx/src/main.rs.h"
+#include "decklink-cxx/src/bridge.rs.h"
 
 class CXXInputCallback: public IDeckLinkInputCallback {
 private:
