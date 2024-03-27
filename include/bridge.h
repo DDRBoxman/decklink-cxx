@@ -49,7 +49,19 @@ rust::String GetDisplayModeName(IDeckLinkDisplayMode *displayMode) {
 	return returnString;
 }
 #elif __linux
-    
+rust::String GetDisplayName(IDeckLink *deckLink) {
+    const char* name;
+    deckLink->GetDisplayName(&name);
+
+	return std::string(name);
+}
+
+rust::String GetDisplayModeName(IDeckLinkDisplayMode *displayMode) {
+	const char* name;
+    displayMode->GetName(&name);
+
+    return std::string(name);
+}
 #endif
 
 
