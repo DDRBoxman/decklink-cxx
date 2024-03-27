@@ -1,6 +1,8 @@
 #include "bridge.h"
 
 #ifdef _WIN32
+#include <comdef.h>
+
 rust::String GetDisplayName(IDeckLink *deckLink) {
     BSTR name;
     deckLink->GetDisplayName(&name);
