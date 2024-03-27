@@ -49,6 +49,8 @@ fn main() {
 
     if cfg!(target_os = "macos") {
         build.file("./decklink/Mac/include/DeckLinkAPIDispatch.cpp");
+    } else if cfg!(target_os = "linux") {
+        build.file("./decklink/Linux/include/DeckLinkAPIDispatch.cpp");
     }
 
     build.flag_if_supported("-std=c++14").compile("cxx-demo");
