@@ -44,8 +44,11 @@ fn main() {
     if cfg!(target_os = "windows") {
         let dest_path = gen_headers();
 
-        build.include(dest_path);
+        build.include(&dest_path);
         build.file("./include/win.cc");
+
+        let decklink_com = dest_path.join("decklink_win.c");
+        build.file(decklink_com);
     }
 
     if cfg!(target_os = "macos") {
