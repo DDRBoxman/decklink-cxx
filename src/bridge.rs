@@ -279,6 +279,8 @@ pub mod decklink_ffi {
             deckLinkDisplayMode: *mut *mut IDeckLinkDisplayMode,
         ) -> c_hresult;
 
+        fn Release(self: Pin<&mut IDeckLinkDisplayModeIterator>) -> c_ulong;
+
         fn GetDisplayMode(self: Pin<&mut IDeckLinkDisplayMode>) -> c_BMDDisplayMode;
         fn GetWidth(self: Pin<&mut IDeckLinkDisplayMode>) -> c_long;
         fn GetHeight(self: Pin<&mut IDeckLinkDisplayMode>) -> c_long;
@@ -287,8 +289,9 @@ pub mod decklink_ffi {
             frameDuration: *mut c_longlong,
             timeScale: *mut c_longlong,
         ) -> c_hresult;
+        fn Release(self: Pin<&mut IDeckLinkDisplayMode>) -> c_ulong;
 
-       /*  unsafe fn DoesSupportVideoMode(
+        /*  unsafe fn DoesSupportVideoMode(
             self: Pin<&mut IDeckLinkInput>,
             connection: u32,
             requestMode: u32,
@@ -340,6 +343,11 @@ pub mod decklink_ffi {
         fn GetRowBytes(self: Pin<&mut IDeckLinkVideoFrame>) -> c_long;
 
         //fn GetBytes (self: Pin<&mut IDeckLinkVideoFrame>, *mut *mut void) -> c_hresult;
+
+        unsafe fn GetDisplayModeIterator(
+            self: Pin<&mut IDeckLinkOutput>,
+            iterator: *mut *mut IDeckLinkDisplayModeIterator,
+        ) -> c_hresult;
 
         fn EnableVideoOutput(
             self: Pin<&mut IDeckLinkOutput>,

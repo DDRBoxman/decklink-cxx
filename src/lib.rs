@@ -119,6 +119,22 @@ pub struct DecklinkOutput<'a> {
 }
 
 impl DecklinkOutput<'_> {
+    pub fn get_display_mode_iterator(&mut self) -> DeckLinkDisplayModeIterator {
+        let mut display_mode_iterator: *mut decklink_ffi::IDeckLinkDisplayModeIterator =
+            std::ptr::null_mut();
+        let display_mode_iterator_ptr: *mut *mut decklink_ffi::IDeckLinkDisplayModeIterator =
+            &mut display_mode_iterator;
+        unsafe {
+            self.output
+                .as_mut()
+                .GetDisplayModeIterator(display_mode_iterator_ptr)
+        };
+
+        return DeckLinkDisplayModeIterator {
+            iterator: unsafe { Pin::new_unchecked(display_mode_iterator.as_mut().unwrap()) },
+        };
+    }
+
     pub fn enable_video_output(&mut self, display_mode: BMDDisplayMode, output_flags: u32) {
         self.output.as_mut().EnableVideoOutput(
             bridge::decklink_type_wrappers::c_BMDDisplayMode(display_mode.repr),
@@ -229,6 +245,22 @@ pub struct DecklinkInput<'a> {
 }
 
 impl DecklinkInput<'_> {
+    pub fn get_display_mode_iterator(&mut self) -> DeckLinkDisplayModeIterator {
+        let mut display_mode_iterator: *mut decklink_ffi::IDeckLinkDisplayModeIterator =
+            std::ptr::null_mut();
+        let display_mode_iterator_ptr: *mut *mut decklink_ffi::IDeckLinkDisplayModeIterator =
+            &mut display_mode_iterator;
+        unsafe {
+            self.input
+                .as_mut()
+                .GetDisplayModeIterator(display_mode_iterator_ptr)
+        };
+
+        return DeckLinkDisplayModeIterator {
+            iterator: unsafe { Pin::new_unchecked(display_mode_iterator.as_mut().unwrap()) },
+        };
+    }
+
     pub fn enable_video_input(
         &mut self,
         display_mode: BMDDisplayMode,
@@ -268,6 +300,65 @@ impl DecklinkInput<'_> {
 impl Drop for DecklinkInput<'_> {
     fn drop(&mut self) {
         self.input.as_mut().Release();
+    }
+}
+
+pub struct DeckLinkDisplayModeIterator<'a> {
+    iterator: Pin<&'a mut decklink_ffi::IDeckLinkDisplayModeIterator>,
+}
+
+impl DeckLinkDisplayModeIterator<'_> {
+    pub fn next(&mut self) -> Option<DecklinkDisplayMode> {
+        let mut display_mode: *mut decklink_ffi::IDeckLinkDisplayMode = std::ptr::null_mut();
+        let display_mode_ptr: *mut *mut decklink_ffi::IDeckLinkDisplayMode = &mut display_mode;
+
+        unsafe {
+            self.iterator.as_mut().Next(display_mode_ptr);
+        }
+
+        if display_mode.is_null() {
+            None
+        } else {
+            Some(DecklinkDisplayMode {
+                display_mode: unsafe { Pin::new_unchecked(display_mode.as_mut().unwrap()) },
+                display_mode_raw: display_mode,
+            })
+        }
+    }
+}
+
+impl Drop for DeckLinkDisplayModeIterator<'_> {
+    fn drop(&mut self) {
+        self.iterator.as_mut().Release();
+    }
+}
+
+pub struct DecklinkDisplayMode<'a> {
+    display_mode: Pin<&'a mut decklink_ffi::IDeckLinkDisplayMode>,
+    display_mode_raw: *mut decklink_ffi::IDeckLinkDisplayMode,
+}
+
+impl DecklinkDisplayMode<'_> {
+    pub fn name(&self) -> String {
+        return unsafe { decklink_ffi::GetDisplayModeName(self.display_mode_raw) };
+    }
+
+    pub fn width(&mut self) -> i64 {
+        return self.display_mode.as_mut().GetWidth().0 as i64;
+    }
+
+    pub fn height(&mut self) -> i64 {
+        return self.display_mode.as_mut().GetHeight().0 as i64;
+    }
+
+    pub fn display_mode_id(&mut self) -> u32 {
+        return self.display_mode.as_mut().GetDisplayMode().0;
+    }
+}
+
+impl Drop for DecklinkDisplayMode<'_> {
+    fn drop(&mut self) {
+        self.display_mode.as_mut().Release();
     }
 }
 
