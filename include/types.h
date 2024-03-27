@@ -3,8 +3,6 @@ class CXXOutputCallback;
 
 typedef long c_long;
 
-
-
 #ifdef _WIN32
 typedef HRESULT c_hresult;
 typedef ULONG c_ulong;

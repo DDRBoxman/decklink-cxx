@@ -399,7 +399,7 @@ pub mod decklink_ffi {
 
         type CXXOutputCallback;
 
-        include!("decklink-cxx/include/test.h");
+        include!("decklink-cxx/include/types.h");
 
         include!("decklink-cxx/include/callback.h");
 
