@@ -1,35 +1,29 @@
 fn main() {
-    /*
-           let mut display_mode_iterator: *mut decklink_ffi::IDeckLinkDisplayModeIterator =
-           std::ptr::null_mut();
-       let display_mode_iterator_ptr: *mut *mut decklink_ffi::IDeckLinkDisplayModeIterator =
-           &mut display_mode_iterator;
-       pin.as_mut()
-           .GetDisplayModeIterator(display_mode_iterator_ptr);
+    let mut iterator = decklink_cxx::DecklinkIterator::new();
 
-       let mut display_mode_iterator_pin: Pin<&mut decklink_ffi::IDeckLinkDisplayModeIterator> =
-           Pin::new_unchecked(display_mode_iterator.as_mut().unwrap());
+    let device = iterator
+        .next()
+        .expect("No device found. Please install device or drivers");
 
-       loop {
-           let mut display_mode: *mut decklink_ffi::IDeckLinkDisplayMode = std::ptr::null_mut();
-           let display_mode_ptr: *mut *mut decklink_ffi::IDeckLinkDisplayMode = &mut display_mode;
-           display_mode_iterator_pin.as_mut().Next(display_mode_ptr);
+    println!("{}", device.get_name());
 
-           if display_mode == null_mut() {
-               break;
-           }
+    let mut output = device.get_output();
+    let mut iterator = output.get_display_mode_iterator();
 
-           let mut display_mode_pin: Pin<&mut decklink_ffi::IDeckLinkDisplayMode> =
-               Pin::new_unchecked(display_mode.as_mut().unwrap());
+    loop {
+        let res = iterator.next();
 
-           let name = decklink_ffi::GetDisplayModeName(display_mode);
-           println!(
-               "{} {} {}x{}",
-               name,
-               display_mode_pin.as_mut().GetDisplayMode(),
-               display_mode_pin.as_mut().GetWidth(),
-               display_mode_pin.GetHeight()
-           );
-       }
-    */
+        match res {
+            Some(mut display_mode) => {
+                println!(
+                    "{} {} {}x{}",
+                    display_mode.name(),
+                    display_mode.display_mode_id(),
+                    display_mode.width(),
+                    display_mode.height(),
+                );
+            }
+            None => break,
+        }
+    }
 }
