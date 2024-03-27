@@ -39,6 +39,7 @@ fn gen_headers() -> PathBuf {
 fn main() {
     let mut build = cxx_build::bridge("src/bridge.rs");
     build.file("./include/callback.cc");
+    build.file("./include/bridge.cc");
 
     if cfg!(target_os = "windows") {
         let dest_path = gen_headers();
