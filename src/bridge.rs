@@ -441,8 +441,6 @@ pub mod decklink_ffi {
             videoFrameAncillaryPackets: *mut *mut IDeckLinkVideoFrameAncillaryPackets,
         ) -> c_hresult;
 
-        unsafe fn FillBlue(frame: *mut IDeckLinkMutableVideoFrame);
-
         unsafe fn GetFrameBytes(frame: *mut IDeckLinkVideoFrame, buffer: *mut *mut u8) -> c_hresult;
 
         unsafe fn GetAncillaryPacketBytes(

@@ -2,7 +2,7 @@ mod bridge;
 
 use bridge::{decklink_ffi, decklink_type_wrappers::c_BMDDeckLinkAPIInformationID};
 
-use std::pin::Pin;
+use std::{pin::Pin, ptr};
 
 pub struct DecklinkAPIInformation {
     api_info: *mut decklink_ffi::IDeckLinkAPIInformation,
@@ -137,6 +137,7 @@ impl DecklinkOutput {
         &mut self,
         width: i32,
         height: i32,
+        row_bytes: i32,
         pixel_format: BMDPixelFormat,
     ) -> Result<DecklinkVideoFrame, ()> {
         let mut frame: *mut decklink_ffi::IDeckLinkMutableVideoFrame = std::ptr::null_mut();
@@ -148,7 +149,7 @@ impl DecklinkOutput {
             pin.CreateVideoFrame(
                 width,
                 height,
-                ((width + 47) / 48) * 128, // todo: it's silly decklink passes this can we do it ourself?
+                row_bytes,
                 bridge::decklink_type_wrappers::c_BMDPixelFormat(pixel_format.repr),
                 0,
                 frame_ptr,
@@ -230,8 +231,32 @@ pub struct DecklinkVideoFrame {
 }
 
 impl<'a> DecklinkVideoFrame {
-    pub fn fill_blue(&self) {
-        unsafe { decklink_ffi::FillBlue(self.frame) };
+    pub fn copy_from_slice(&self, src: &[u8]) {
+        let mut pin: Pin<&mut decklink_ffi::IDeckLinkVideoFrame> = unsafe { Pin::new_unchecked(
+            (self.frame as *mut decklink_ffi::IDeckLinkVideoFrame)
+                .as_mut()
+                .unwrap(),
+        ) };
+
+        let row_bytes = pin.as_mut().GetRowBytes().0;
+        let height = pin.as_mut().GetHeight().0;
+
+        let len: usize = (row_bytes * height).try_into().unwrap();
+
+        if len != src.len() {
+            panic!("Size Mismatch");
+        }
+
+        let mut data: *mut u8 = std::ptr::null_mut();
+        let data_ptr: *mut *mut u8 = &mut data;
+
+        let res = unsafe {
+            decklink_ffi::GetFrameBytes(
+                self.frame as *mut decklink_ffi::IDeckLinkVideoFrame,
+                data_ptr
+            )};
+
+        unsafe { ptr::copy_nonoverlapping(src.as_ptr(), data, len) };
     }
 
     pub fn get_ancillary_packets(&self) {
