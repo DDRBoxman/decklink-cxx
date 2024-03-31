@@ -70,6 +70,10 @@ HRESULT GetAncillaryPackets(IDeckLinkVideoFrame *videoFrame, IDeckLinkVideoFrame
 	return videoFrame->QueryInterface(IID_IDeckLinkVideoFrame, (void**)videoFrameAncillaryPackets);
 }
 
+HRESULT GetAncillaryPacketBytes(IDeckLinkAncillaryPacket *packet, BMDAncillaryPacketFormat format, const uint8_t** data, uint32_t* size) {
+	return packet->GetBytes(format, (const void**)data, size);
+}
+
 const uint32_t kFrameDuration = 1000;
 const uint32_t kTimeScale = 25000;
 const uint32_t kFrameWidth = 1920;

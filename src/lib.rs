@@ -259,9 +259,96 @@ pub struct DeckLinkVideoFrameAncillaryPackets {
     packets: *mut decklink_ffi::IDeckLinkVideoFrameAncillaryPackets,
 }
 
+impl DeckLinkVideoFrameAncillaryPackets {
+    pub fn get_packet_iterator(&self) {
+        let mut ancillary_packet_iterator: *mut decklink_ffi::IDeckLinkAncillaryPacketIterator =
+            std::ptr::null_mut();
+        let ancillary_packet_iterator_ptr: *mut *mut decklink_ffi::IDeckLinkAncillaryPacketIterator =
+        &mut ancillary_packet_iterator;
+
+        let pin: Pin<&mut decklink_ffi::IDeckLinkVideoFrameAncillaryPackets> =
+            unsafe { Pin::new_unchecked(self.packets.as_mut().unwrap()) };
+
+        let result = unsafe { pin.GetPacketIterator(ancillary_packet_iterator_ptr) };
+    }
+
+    pub fn attach_packet(&self, packet: DeckLinkAncillaryPacket) {
+        let pin: Pin<&mut decklink_ffi::IDeckLinkVideoFrameAncillaryPackets> =
+            unsafe { Pin::new_unchecked(self.packets.as_mut().unwrap()) };
+
+        let result = unsafe { pin.AttachPacket(packet.packet) };
+    }
+
+    pub fn detach_packet(&self, packet: DeckLinkAncillaryPacket) {
+        let pin: Pin<&mut decklink_ffi::IDeckLinkVideoFrameAncillaryPackets> =
+            unsafe { Pin::new_unchecked(self.packets.as_mut().unwrap()) };
+
+        let result = unsafe { pin.DetachPacket(packet.packet) };
+    }
+
+    pub fn detach_all_packets(&self) {
+        let pin: Pin<&mut decklink_ffi::IDeckLinkVideoFrameAncillaryPackets> =
+            unsafe { Pin::new_unchecked(self.packets.as_mut().unwrap()) };
+
+        let result = pin.DetachAllPackets();
+    }
+}
+
 impl Drop for DeckLinkVideoFrameAncillaryPackets {
     fn drop(&mut self) {
         unsafe { decklink_ffi::Release(self.packets as *mut decklink_ffi::IUnknown) }
+    }
+}
+
+pub struct DeckLinkAncillaryPacket {
+    packet: *mut decklink_ffi::IDeckLinkAncillaryPacket,
+}
+
+impl DeckLinkAncillaryPacket {
+    pub fn get_did(&self) -> u8 {
+        let pin: Pin<&mut decklink_ffi::IDeckLinkAncillaryPacket> =
+            unsafe { Pin::new_unchecked(self.packet.as_mut().unwrap()) };
+        return pin.GetDID();
+    }
+
+    pub fn get_sdid(&self) -> u8 {
+        let pin: Pin<&mut decklink_ffi::IDeckLinkAncillaryPacket> =
+            unsafe { Pin::new_unchecked(self.packet.as_mut().unwrap()) };
+        return pin.GetSDID();
+    }
+
+    pub fn get_line_number(&self) -> u32 {
+        let pin: Pin<&mut decklink_ffi::IDeckLinkAncillaryPacket> =
+            unsafe { Pin::new_unchecked(self.packet.as_mut().unwrap()) };
+        return pin.GetLineNumber();
+    }
+
+    pub fn get_data_stream_index(&self) -> u8 {
+        let pin: Pin<&mut decklink_ffi::IDeckLinkAncillaryPacket> =
+            unsafe { Pin::new_unchecked(self.packet.as_mut().unwrap()) };
+        return pin.GetDataStreamIndex();
+    }
+
+    pub fn get_bytes(&self, format: BMDAncillaryPacketFormat) {
+        let mut data: *const u8 = std::ptr::null_mut();
+        let data_ptr: *mut *const u8 = &mut data;
+
+        let mut size: *mut u32 = std::ptr::null_mut();
+
+        unsafe {
+            decklink_ffi::GetAncillaryPacketBytes(
+                self.packet,
+                bridge::decklink_type_wrappers::c_BMDAncillaryPacketFormat(format.repr),
+                data_ptr,
+                size,
+            )
+        };
+    }
+}
+
+impl Drop for DeckLinkAncillaryPacket {
+    fn drop(&mut self) {
+        unsafe { decklink_ffi::Release(self.packet as *mut decklink_ffi::IUnknown) }
     }
 }
 
@@ -398,3 +485,4 @@ impl Drop for DecklinkDisplayMode {
 
 pub type BMDPixelFormat = decklink_ffi::_BMDPixelFormat;
 pub type BMDDisplayMode = decklink_ffi::_BMDDisplayMode;
+pub type BMDAncillaryPacketFormat = decklink_ffi::_BMDAncillaryPacketFormat;

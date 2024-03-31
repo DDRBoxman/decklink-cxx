@@ -12,6 +12,7 @@ typedef BMDDisplayMode c_BMDDisplayMode;
 typedef BMDPixelFormat c_BMDPixelFormat;
 typedef BMDVideoInputFlags c_BMDVideoInputFlags;
 typedef BMDVideoOutputFlags c_BMDVideoOutputFlags;
+typedef BMDAncillaryPacketFormat c_BMDAncillaryPacketFormat;
 #elif __APPLE__
 #include <CoreFoundation/CFPlugInCOM.h>
 typedef HRESULT c_hresult;
@@ -22,6 +23,7 @@ typedef uint32_t c_BMDDisplayMode;
 typedef uint32_t c_BMDPixelFormat;
 typedef uint32_t c_BMDVideoInputFlags;
 typedef uint32_t c_BMDVideoOutputFlags;
+typedef uint32_t c_BMDAncillaryPacketFormat;
 #elif __linux
 typedef int c_hresult;
 typedef ULONG c_ulong;
@@ -31,4 +33,5 @@ typedef uint32_t c_BMDDisplayMode;
 typedef uint32_t c_BMDPixelFormat;
 typedef uint32_t c_BMDVideoInputFlags;
 typedef uint32_t c_BMDVideoOutputFlags;
+typedef uint32_t c_BMDAncillaryPacketFormat;
 #endif

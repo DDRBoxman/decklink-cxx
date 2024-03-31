@@ -54,6 +54,11 @@ pub(crate) mod decklink_type_wrappers {
     bridge_type_wrapper!(c_BMDPixelFormat, "c_BMDPixelFormat", u32);
     bridge_type_wrapper!(c_BMDVideoInputFlags, "c_BMDVideoInputFlags", u32);
     bridge_type_wrapper!(c_BMDVideoOutputFlags, "c_BMDVideoOutputFlags", u32);
+    bridge_type_wrapper!(
+        c_BMDAncillaryPacketFormat,
+        "c_BMDAncillaryPacketFormat",
+        u32
+    );
 }
 
 #[cxx::bridge]
@@ -227,6 +232,12 @@ pub mod decklink_ffi {
         bmdModeUnknown = 0x69756E6B,
     }
 
+    enum _BMDAncillaryPacketFormat {
+        bmdAncillaryPacketFormatUInt8 = 0x75693038,
+        bmdAncillaryPacketFormatUInt16 = 0x75693136,
+        bmdAncillaryPacketFormatYCbCr10 = 0x76323130,
+    }
+
     unsafe extern "C++" {
         include!("decklink-cxx/include/platform.h");
 
@@ -238,6 +249,8 @@ pub mod decklink_ffi {
         type BMDPixelFormat;
         type _BMDDisplayMode;
         type BMDDisplayMode;
+        type _BMDAncillaryPacketFormat;
+        type BMDAncillaryPacketFormat;
 
         fn CreateDeckLinkAPIInformationInstance() -> *mut IDeckLinkAPIInformation;
 
@@ -338,6 +351,11 @@ pub mod decklink_ffi {
         ) -> c_hresult;
         fn DetachAllPackets(self: Pin<&mut IDeckLinkVideoFrameAncillaryPackets>) -> c_hresult;
 
+        fn GetDID(self: Pin<&mut IDeckLinkAncillaryPacket>) -> u8;
+        fn GetSDID(self: Pin<&mut IDeckLinkAncillaryPacket>) -> u8;
+        fn GetLineNumber(self: Pin<&mut IDeckLinkAncillaryPacket>) -> u32; // On output, zero is auto
+        fn GetDataStreamIndex(self: Pin<&mut IDeckLinkAncillaryPacket>) -> u8; // Usually zero. Can only be 1 if non-SD and the first data stream is completely full
+
         fn GetWidth(self: Pin<&mut IDeckLinkVideoFrame>) -> c_long;
         fn GetHeight(self: Pin<&mut IDeckLinkVideoFrame>) -> c_long;
         fn GetRowBytes(self: Pin<&mut IDeckLinkVideoFrame>) -> c_long;
@@ -427,6 +445,13 @@ pub mod decklink_ffi {
 
         unsafe fn FillBlue(frame: *mut IDeckLinkMutableVideoFrame);
 
+        unsafe fn GetAncillaryPacketBytes(
+            packet: *mut IDeckLinkAncillaryPacket,
+            format: c_BMDAncillaryPacketFormat,
+            data: *mut *const u8,
+            size: *mut u32,
+        ) -> c_hresult;
+
         unsafe fn Release(obj: *mut IUnknown);
 
         type c_long = crate::bridge::decklink_type_wrappers::c_long;
@@ -439,6 +464,8 @@ pub mod decklink_ffi {
         type c_BMDPixelFormat = crate::bridge::decklink_type_wrappers::c_BMDPixelFormat;
         type c_BMDVideoInputFlags = crate::bridge::decklink_type_wrappers::c_BMDVideoInputFlags;
         type c_BMDVideoOutputFlags = crate::bridge::decklink_type_wrappers::c_BMDVideoOutputFlags;
+        type c_BMDAncillaryPacketFormat =
+            crate::bridge::decklink_type_wrappers::c_BMDAncillaryPacketFormat;
     }
 }
 
