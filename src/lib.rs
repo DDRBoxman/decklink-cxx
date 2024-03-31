@@ -255,7 +255,7 @@ impl<'a> DecklinkVideoFrame {
                 .unwrap(),
         ) };
 
-        return pin.GetRowBytes().0;
+        return pin.GetRowBytes().0 as i64;
     }
 
     pub fn get_bytes(&self) -> &'a [u8] {
