@@ -19,6 +19,8 @@ HRESULT GetAncillaryPacketBytes(IDeckLinkAncillaryPacket *packet, BMDAncillaryPa
 
 void FillBlue(IDeckLinkMutableVideoFrame* theFrame);
 
+HRESULT GetFrameBytes(IDeckLinkVideoFrame *frame, uint8_t** buffer);
+
 void Release(IUnknown *obj);
 
 CXXInputCallback* new_input_callback(RustInputCallback *callback);

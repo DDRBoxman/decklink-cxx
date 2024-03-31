@@ -211,7 +211,7 @@ impl DecklinkOutput {
                 &mut rust_callback as *mut crate::bridge::RustOutputCallback,
             );
             let pin: Pin<&mut decklink_ffi::IDeckLinkOutput> =
-                unsafe { Pin::new_unchecked(self.output.as_mut().unwrap()) };
+                  Pin::new_unchecked(self.output.as_mut().unwrap());
             pin.SetScheduledFrameCompletionCallback(
                 output_callback as *mut decklink_ffi::IDeckLinkVideoOutputCallback,
             );
@@ -229,7 +229,7 @@ pub struct DecklinkVideoFrame {
     frame: *mut decklink_ffi::IDeckLinkMutableVideoFrame,
 }
 
-impl DecklinkVideoFrame {
+impl<'a> DecklinkVideoFrame {
     pub fn fill_blue(&self) {
         unsafe { decklink_ffi::FillBlue(self.frame) };
     }
@@ -246,6 +246,39 @@ impl DecklinkVideoFrame {
                 video_frame_ancillary_packets_ptr,
             )
         };
+    }
+
+    pub fn get_row_bytes(&self) -> i64 {
+        let mut pin: Pin<&mut decklink_ffi::IDeckLinkVideoFrame> = unsafe { Pin::new_unchecked(
+            (self.frame as *mut decklink_ffi::IDeckLinkVideoFrame)
+                .as_mut()
+                .unwrap(),
+        ) };
+
+        return pin.GetRowBytes().0;
+    }
+
+    pub fn get_bytes(&self) -> &'a [u8] {
+        let mut pin: Pin<&mut decklink_ffi::IDeckLinkVideoFrame> = unsafe { Pin::new_unchecked(
+            (self.frame as *mut decklink_ffi::IDeckLinkVideoFrame)
+                .as_mut()
+                .unwrap(),
+        ) };
+
+        let row_bytes = pin.as_mut().GetRowBytes().0;
+        let height = pin.as_mut().GetHeight().0;
+
+        let mut data: *mut u8 = std::ptr::null_mut();
+        let data_ptr: *mut *mut u8 = &mut data;
+
+        unsafe {
+            decklink_ffi::GetFrameBytes(
+                self.frame as *mut decklink_ffi::IDeckLinkVideoFrame,
+                data_ptr
+            );
+
+            return std::slice::from_raw_parts(data, (row_bytes * height).try_into().unwrap());
+        }
     }
 }
 
@@ -304,7 +337,7 @@ pub struct DeckLinkAncillaryPacket {
     packet: *mut decklink_ffi::IDeckLinkAncillaryPacket,
 }
 
-impl DeckLinkAncillaryPacket {
+impl<'a> DeckLinkAncillaryPacket {
     pub fn get_did(&self) -> u8 {
         let pin: Pin<&mut decklink_ffi::IDeckLinkAncillaryPacket> =
             unsafe { Pin::new_unchecked(self.packet.as_mut().unwrap()) };
@@ -329,11 +362,11 @@ impl DeckLinkAncillaryPacket {
         return pin.GetDataStreamIndex();
     }
 
-    pub fn get_bytes(&self, format: BMDAncillaryPacketFormat) {
+    pub fn get_bytes(&self, format: BMDAncillaryPacketFormat) -> &'a [u8] {
         let mut data: *const u8 = std::ptr::null_mut();
         let data_ptr: *mut *const u8 = &mut data;
 
-        let mut size: *mut u32 = std::ptr::null_mut();
+        let size: *mut u32 = std::ptr::null_mut();
 
         unsafe {
             decklink_ffi::GetAncillaryPacketBytes(
@@ -341,7 +374,9 @@ impl DeckLinkAncillaryPacket {
                 bridge::decklink_type_wrappers::c_BMDAncillaryPacketFormat(format.repr),
                 data_ptr,
                 size,
-            )
+            );
+
+            return std::slice::from_raw_parts(data, (*size).try_into().unwrap());
         };
     }
 }

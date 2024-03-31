@@ -360,8 +360,6 @@ pub mod decklink_ffi {
         fn GetHeight(self: Pin<&mut IDeckLinkVideoFrame>) -> c_long;
         fn GetRowBytes(self: Pin<&mut IDeckLinkVideoFrame>) -> c_long;
 
-        //fn GetBytes (self: Pin<&mut IDeckLinkVideoFrame>, *mut *mut void) -> c_hresult;
-
         unsafe fn GetDisplayModeIterator(
             self: Pin<&mut IDeckLinkOutput>,
             iterator: *mut *mut IDeckLinkDisplayModeIterator,
@@ -444,6 +442,8 @@ pub mod decklink_ffi {
         ) -> c_hresult;
 
         unsafe fn FillBlue(frame: *mut IDeckLinkMutableVideoFrame);
+
+        unsafe fn GetFrameBytes(frame: *mut IDeckLinkVideoFrame, buffer: *mut *mut u8) -> c_hresult;
 
         unsafe fn GetAncillaryPacketBytes(
             packet: *mut IDeckLinkAncillaryPacket,
