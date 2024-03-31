@@ -17,8 +17,6 @@ HRESULT GetAncillaryPackets(IDeckLinkVideoFrame *videoFrame, IDeckLinkVideoFrame
 
 HRESULT GetAncillaryPacketBytes(IDeckLinkAncillaryPacket *packet, BMDAncillaryPacketFormat format, const uint8_t** data, uint32_t* size);
 
-void FillBlue(IDeckLinkMutableVideoFrame* theFrame);
-
 HRESULT GetFrameBytes(IDeckLinkVideoFrame *frame, uint8_t** buffer);
 
 void Release(IUnknown *obj);
