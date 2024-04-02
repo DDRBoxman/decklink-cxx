@@ -64,11 +64,13 @@ fn main() {
     }
 
     println!("cargo:rerun-if-changed=src/bridge.rs");
+    println!("cargo:rerun-if-changed=include/bridge.cc");
     println!("cargo:rerun-if-changed=include/bridge.h");
     println!("cargo:rerun-if-changed=include/callback.h");
     println!("cargo:rerun-if-changed=include/callback.cc");
     println!("cargo:rerun-if-changed=include/types.h");
     println!("cargo:rerun-if-changed=include/platform.h");
+    println!("cargo:rerun-if-changed=include/win.cc");
 }
 
 /*
