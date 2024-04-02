@@ -1,14 +1,16 @@
-use std::{thread, time};
-use image;
 use decklink_cxx;
+use image;
+use std::{thread, time};
 
 fn main() {
-    let im = image::open("examples/assets/miku.png").expect("File not found!").to_rgba8();
+    let im = image::open("examples/assets/miku.png")
+        .expect("File not found!")
+        .to_rgba8();
     let mut image_vec: Vec<u8> = im.into_raw();
 
     for i in (0..image_vec.len()).step_by(4) {
-        let b = image_vec[i+2];
-        image_vec[i+2] = image_vec[i];
+        let b = image_vec[i + 2];
+        image_vec[i + 2] = image_vec[i];
         image_vec[i] = b;
     }
 
@@ -26,8 +28,12 @@ fn main() {
     output.set_scheduled_frame_completion_callback();
 
     for i in 0..20 {
-        let res =
-            output.create_video_frame(1920, 1080, 1920*4, decklink_cxx::BMDPixelFormat::bmdFormat8BitBGRA);
+        let res = output.create_video_frame(
+            1920,
+            1080,
+            1920 * 4,
+            decklink_cxx::BMDPixelFormat::bmdFormat8BitBGRA,
+        );
 
         match res {
             Ok(frame) => {

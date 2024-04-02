@@ -64,10 +64,10 @@ pub(crate) mod decklink_type_wrappers {
 #[cxx::bridge]
 pub mod decklink_ffi {
     extern "Rust" {
-        type RustInputCallback;
+        type RustInputCallback<'a>;
         fn video_input_format_changed(self: &RustInputCallback);
         unsafe fn video_input_frame_arrived(
-            self: &RustInputCallback,
+            self: &mut RustInputCallback,
             videoFrame: *mut IDeckLinkVideoInputFrame,
         );
 
@@ -441,7 +441,8 @@ pub mod decklink_ffi {
             videoFrameAncillaryPackets: *mut *mut IDeckLinkVideoFrameAncillaryPackets,
         ) -> c_hresult;
 
-        unsafe fn GetFrameBytes(frame: *mut IDeckLinkVideoFrame, buffer: *mut *mut u8) -> c_hresult;
+        unsafe fn GetFrameBytes(frame: *mut IDeckLinkVideoFrame, buffer: *mut *mut u8)
+            -> c_hresult;
 
         unsafe fn GetAncillaryPacketBytes(
             packet: *mut IDeckLinkAncillaryPacket,
@@ -467,28 +468,28 @@ pub mod decklink_ffi {
     }
 }
 
-pub struct RustInputCallback {}
+pub struct RustInputCallback<'a> {
+    frame_arrived_callback: Box<dyn FnMut(*mut decklink_ffi::IDeckLinkVideoInputFrame) + 'a>,
+}
 
-impl RustInputCallback {
-    fn video_input_format_changed(self: &RustInputCallback) {
+impl<'a> RustInputCallback<'a> {
+    pub fn new(
+        frame_arrived_callback: impl FnMut(*mut decklink_ffi::IDeckLinkVideoInputFrame) + 'a,
+    ) -> Self {
+        return Self {
+            frame_arrived_callback: Box::new(frame_arrived_callback),
+        };
+    }
+
+    fn video_input_format_changed(self: &RustInputCallback<'a>) {
         println!("FORMAT CHANGED");
     }
 
     fn video_input_frame_arrived(
-        self: &RustInputCallback,
+        self: &mut RustInputCallback<'a>,
         video_frame: *mut decklink_ffi::IDeckLinkVideoInputFrame,
     ) {
-        println!("NEW FRAME");
-
-        unsafe {
-            let mut pin: Pin<&mut decklink_ffi::IDeckLinkVideoFrame> = Pin::new_unchecked(
-                (video_frame as *mut decklink_ffi::IDeckLinkVideoFrame)
-                    .as_mut()
-                    .unwrap(),
-            );
-
-            println!("{}", pin.as_mut().GetRowBytes());
-        }
+        (self.frame_arrived_callback)(video_frame);
     }
 }
 
