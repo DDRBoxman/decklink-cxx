@@ -1,12 +1,11 @@
 mod bridge;
 
-use bridge::{decklink_ffi, decklink_type_wrappers::c_BMDDeckLinkAPIInformationID};
-
-use std::{
-    os::raw::c_void,
-    pin::Pin,
-    ptr::{self, null_mut},
+use bridge::{
+    decklink_ffi::{self, IDeckLinkVideoFrame},
+    decklink_type_wrappers::c_BMDDeckLinkAPIInformationID,
 };
+
+use std::{pin::Pin, ptr};
 
 pub struct DecklinkAPIInformation {
     api_info: *mut decklink_ffi::IDeckLinkAPIInformation,
@@ -262,6 +261,12 @@ impl DecklinkVideoFrameShared<'_> for DecklinkVideoFrame {
     }
 }
 
+impl Drop for DecklinkVideoFrame {
+    fn drop(&mut self) {
+        unsafe { decklink_ffi::Release(self.frame as *mut decklink_ffi::IUnknown) };
+    }
+}
+
 pub trait DecklinkVideoFrameShared<'a> {
     fn get_video_frame(&self) -> *mut decklink_ffi::IDeckLinkVideoFrame;
 
@@ -314,6 +319,12 @@ impl DecklinkVideoFrameShared<'_> for DecklinkInputVideoFrame {
     }
 }
 
+impl Drop for DecklinkInputVideoFrame {
+    fn drop(&mut self) {
+        unsafe { decklink_ffi::Release(self.frame as *mut decklink_ffi::IUnknown) };
+    }
+}
+
 pub struct DecklinkMutableVideoFrame {
     frame: *mut decklink_ffi::IDeckLinkMutableVideoFrame,
 }
@@ -352,7 +363,7 @@ impl<'a> DecklinkMutableVideoFrame {
                 data_ptr,
             )
         };
-
+        
         unsafe { ptr::copy_nonoverlapping(src.as_ptr(), data, len) };
     }
 }
@@ -602,6 +613,52 @@ impl DecklinkDisplayMode {
 impl Drop for DecklinkDisplayMode {
     fn drop(&mut self) {
         unsafe { decklink_ffi::Release(self.display_mode as *mut decklink_ffi::IUnknown) }
+    }
+}
+
+pub struct DecklinkVideoConversion {
+    instance: *mut decklink_ffi::IDeckLinkVideoConversion,
+}
+
+impl DecklinkVideoConversion {
+    pub fn new() -> Self {
+        let instance = decklink_ffi::CreateVideoConversionInstance();
+        return DecklinkVideoConversion { instance };
+    }
+
+    pub fn convert_frame<'a>(
+        &self,
+        src_frame: &impl DecklinkVideoFrameShared<'a>,
+        width: i32,
+        height: i32,
+        row_bytes: i32,
+        pixel_format: BMDPixelFormat,
+    ) -> DecklinkVideoFrame {
+        let pin: Pin<&mut decklink_ffi::IDeckLinkVideoConversion> =
+            unsafe { Pin::new_unchecked(self.instance.as_mut().unwrap()) };
+
+        let new_frame = decklink_ffi::new_conversion_frame(
+            crate::bridge::decklink_type_wrappers::c_long(width.into()),
+            crate::bridge::decklink_type_wrappers::c_long(height.into()),
+            crate::bridge::decklink_type_wrappers::c_long(row_bytes.into()),
+            bridge::decklink_type_wrappers::c_BMDPixelFormat(pixel_format.repr),
+        );
+
+        let res = unsafe {
+            pin.ConvertFrame(
+                src_frame.get_video_frame(),
+                new_frame as *mut IDeckLinkVideoFrame,
+            )
+        };
+        return DecklinkVideoFrame {
+            frame: new_frame as *mut IDeckLinkVideoFrame,
+        };
+    }
+}
+
+impl Drop for DecklinkVideoConversion {
+    fn drop(&mut self) {
+        unsafe { decklink_ffi::Release(self.instance as *mut decklink_ffi::IUnknown) }
     }
 }
 

@@ -1,5 +1,6 @@
 class CXXInputCallback;
 class CXXOutputCallback;
+class ConversionFrame;
 
 typedef long c_long;
 

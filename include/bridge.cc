@@ -81,3 +81,76 @@ HRESULT GetFrameBytes(IDeckLinkVideoFrame *frame, uint8_t** buffer) {
 void Release(IUnknown *obj) {
     obj->Release();
 }
+
+long ConversionFrame::GetWidth(void) {
+	return width;
+}
+
+long ConversionFrame::GetHeight(void) {
+	return height;
+}
+
+long ConversionFrame::GetRowBytes(void) {
+	return rowBytes;
+}
+
+BMDPixelFormat ConversionFrame::GetPixelFormat(void) {
+	return pixelFormat;
+}
+
+HRESULT	STDMETHODCALLTYPE ConversionFrame::QueryInterface (REFIID iid, LPVOID *ppv)
+{
+    *ppv = NULL;
+    return E_NOINTERFACE;
+}
+
+ULONG STDMETHODCALLTYPE ConversionFrame::AddRef()
+{
+    return ++m_refCount;
+}
+
+ULONG STDMETHODCALLTYPE ConversionFrame::Release()
+{
+    ULONG newRefValue = --m_refCount;
+    if (newRefValue == 0)
+        delete this;
+
+    return newRefValue;
+}
+
+BMDFrameFlags ConversionFrame::GetFlags()
+{
+	return m_frameFlags;
+}
+
+HRESULT ConversionFrame::GetBytes(void **buffer)
+{
+	if (buffer == nullptr || m_frameData.empty())
+		return E_FAIL;
+	
+	*buffer = (void*)m_frameData.data();
+
+	return S_OK;
+}
+
+HRESULT ConversionFrame::GetTimecode(BMDTimecodeFormat format, IDeckLinkTimecode **timecode)
+{
+	(void)format;   // unused
+	(void)timecode; // unused
+	return E_NOTIMPL;
+}
+
+HRESULT ConversionFrame::GetAncillaryData(IDeckLinkVideoFrameAncillary **ancillary)
+{
+	(void)ancillary; // unused
+	return E_NOTIMPL;
+}
+
+ConversionFrame* new_conversion_frame(
+    long width,
+    long height,
+    long row_bytes,
+    BMDPixelFormat pixel_format
+) {
+	return new ConversionFrame(width, height, row_bytes, pixel_format);
+}

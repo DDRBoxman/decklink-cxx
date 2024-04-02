@@ -24,10 +24,21 @@ IDeckLinkAPIInformation* CreateDeckLinkAPIInformationInstance(void) {
     return deckLinkAPIInformation;
 }
 
+IDeckLinkVideoConversion* CreateVideoConversionInstance(void) {
+    HRESULT result = S_OK;
+
+    IDeckLinkVideoConversion *deckLinkVideoConversion;
+    result = CoCreateInstance(CLSID_CDeckLinkVideoConversion, NULL, CLSCTX_ALL, IID_IDeckLinkVideoConversion, (void**)deckLinkVideoConversion);
+    if (FAILED(result))
+	{
+        return nullptr;
+	}
+    return deckLinkVideoConversion;
+}
+
 /*
 IDeckLinkDiscovery* CreateDeckLinkDiscoveryInstance(void);
 IDeckLinkGLScreenPreviewHelper* CreateOpenGLScreenPreviewHelper(void);
 IDeckLinkGLScreenPreviewHelper* CreateOpenGL3ScreenPreviewHelper(void);	// Requires OpenGL 3.2 support and provides improved performance and color handling
-IDeckLinkVideoConversion* CreateVideoConversionInstance(void);
 IDeckLinkVideoFrameAncillaryPackets* CreateVideoFrameAncillaryPacketsInstance(void);	// For use when creating a custom IDeckLinkVideoFrame without wrapping IDeckLinkOutput::CreateVideoFrame
 */

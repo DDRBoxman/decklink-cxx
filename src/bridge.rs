@@ -410,6 +410,16 @@ pub mod decklink_ffi {
 
         fn Release(self: Pin<&mut IDeckLinkOutput>) -> c_ulong;
 
+        type IDeckLinkVideoConversion;
+
+        fn CreateVideoConversionInstance() -> *mut IDeckLinkVideoConversion;
+
+        unsafe fn ConvertFrame(
+            self: Pin<&mut IDeckLinkVideoConversion>,
+            srcFrame: *mut IDeckLinkVideoFrame,
+            dstFrame: *mut IDeckLinkVideoFrame,
+        ) -> c_hresult;
+
         type IUnknown;
 
         fn Release(self: Pin<&mut IUnknown>) -> c_ulong;
@@ -418,11 +428,20 @@ pub mod decklink_ffi {
 
         type CXXOutputCallback;
 
+        type ConversionFrame;
+
         include!("decklink-cxx/include/types.h");
 
         include!("decklink-cxx/include/callback.h");
 
         include!("decklink-cxx/include/bridge.h");
+
+        fn new_conversion_frame(
+            width: c_long,
+            height: c_long,
+            row_bytes: c_long,
+            pixel_format: c_BMDPixelFormat,
+        ) -> *mut ConversionFrame;
 
         unsafe fn new_input_callback(callback: *mut RustInputCallback) -> *mut CXXInputCallback;
 
