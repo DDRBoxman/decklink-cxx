@@ -21,7 +21,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     let callback = |frame: decklink_cxx::DecklinkInputVideoFrame| {
-        let pixels = decklink_cxx::DecklinkVideoFrame::get_bytes(&frame);
+        let pixels = decklink_cxx::DecklinkVideoFrameShared::get_bytes(&frame);
         let image = ImageView::new(ImageInfo::rgba8(1920, 1080), pixels);
         window.set_image("image-001", image);
     };
