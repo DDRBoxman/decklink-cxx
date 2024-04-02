@@ -71,8 +71,11 @@ pub mod decklink_ffi {
             videoFrame: *mut IDeckLinkVideoInputFrame,
         );
 
-        type RustOutputCallback;
-        fn scheduled_frame_completed(self: &RustOutputCallback);
+        type RustOutputCallback<'a>;
+        unsafe fn scheduled_frame_completed(
+            self: &mut RustOutputCallback,
+            video_frame: *mut IDeckLinkVideoFrame,
+        );
         fn scheduled_playback_has_stopped(self: &RustOutputCallback);
     }
 
@@ -493,14 +496,27 @@ impl<'a> RustInputCallback<'a> {
     }
 }
 
-pub struct RustOutputCallback {}
+pub struct RustOutputCallback<'a> {
+    frame_completed_callback: Box<dyn FnMut(*mut decklink_ffi::IDeckLinkVideoFrame) + 'a>,
+}
 
-impl RustOutputCallback {
-    fn scheduled_frame_completed(self: &RustOutputCallback) {
-        println!("COMPLETED");
+impl<'a> RustOutputCallback<'a> {
+    pub fn new(
+        frame_completed_callback: impl FnMut(*mut decklink_ffi::IDeckLinkVideoFrame) + 'a,
+    ) -> Self {
+        return Self {
+            frame_completed_callback: Box::new(frame_completed_callback),
+        };
     }
 
-    fn scheduled_playback_has_stopped(self: &RustOutputCallback) {
+    fn scheduled_frame_completed(
+        self: &mut RustOutputCallback<'a>,
+        video_frame: *mut decklink_ffi::IDeckLinkVideoFrame,
+    ) {
+        (self.frame_completed_callback)(video_frame)
+    }
+
+    fn scheduled_playback_has_stopped(self: &RustOutputCallback<'a>) {
         println!("STOPPED");
     }
 }

@@ -1,8 +1,6 @@
 mod bridge;
 
-use bridge::{
-    decklink_ffi, decklink_type_wrappers::c_BMDDeckLinkAPIInformationID, RustInputCallback,
-};
+use bridge::{decklink_ffi, decklink_type_wrappers::c_BMDDeckLinkAPIInformationID};
 
 use std::{
     os::raw::c_void,
@@ -91,7 +89,10 @@ impl DecklinkDevice {
         let output_ptr: *mut *mut decklink_ffi::IDeckLinkOutput = &mut output;
         let result = unsafe { decklink_ffi::GetOutput(self.device, output_ptr) };
 
-        return DecklinkOutput { output };
+        return DecklinkOutput {
+            output,
+            callback: None,
+        };
     }
 
     pub fn get_input(&self) -> DecklinkInput {
@@ -112,11 +113,12 @@ impl Drop for DecklinkDevice {
     }
 }
 
-pub struct DecklinkOutput {
+pub struct DecklinkOutput<'a> {
     output: *mut decklink_ffi::IDeckLinkOutput,
+    callback: Option<*mut crate::bridge::RustOutputCallback<'a>>,
 }
 
-impl DecklinkOutput {
+impl<'a> DecklinkOutput<'a> {
     pub fn get_display_mode_iterator(&mut self) -> DeckLinkDisplayModeIterator {
         let mut display_mode_iterator: *mut decklink_ffi::IDeckLinkDisplayModeIterator =
             std::ptr::null_mut();
@@ -214,28 +216,53 @@ impl DecklinkOutput {
         };
     }
 
-    pub fn set_scheduled_frame_completion_callback(&mut self) {
-        let mut rust_callback = crate::bridge::RustOutputCallback {};
+    pub fn set_scheduled_frame_completion_callback(
+        &mut self,
+        mut frame_callback: impl FnMut(DecklinkVideoFrame) + 'a,
+    ) {
+        let frame_completion_callback = move |frame: *mut decklink_ffi::IDeckLinkVideoFrame| {
+            let frame = DecklinkVideoFrame { frame };
+
+            frame_callback(frame);
+        };
+        let rust_callback = crate::bridge::RustOutputCallback::new(frame_completion_callback);
+        let callback = Box::into_raw(Box::new(rust_callback));
+        let output_callback = unsafe { decklink_ffi::new_output_callback(callback) };
+        let pin: Pin<&mut decklink_ffi::IDeckLinkOutput> =
+            unsafe { Pin::new_unchecked(self.output.as_mut().unwrap()) };
         unsafe {
-            let output_callback = decklink_ffi::new_output_callback(
-                &mut rust_callback as *mut crate::bridge::RustOutputCallback,
-            );
-            let pin: Pin<&mut decklink_ffi::IDeckLinkOutput> =
-                Pin::new_unchecked(self.output.as_mut().unwrap());
             pin.SetScheduledFrameCompletionCallback(
                 output_callback as *mut decklink_ffi::IDeckLinkVideoOutputCallback,
-            );
-        }
+            )
+        };
+        self.callback = Some(callback);
     }
 }
 
-impl Drop for DecklinkOutput {
+impl Drop for DecklinkOutput<'_> {
     fn drop(&mut self) {
+        if let Some(callback) = self.callback {
+            unsafe {
+                drop(Box::from_raw(
+                    callback as *mut crate::bridge::RustOutputCallback,
+                ))
+            };
+        }
         unsafe { decklink_ffi::Release(self.output as *mut decklink_ffi::IUnknown) }
     }
 }
 
-pub trait DecklinkVideoFrame<'a> {
+pub struct DecklinkVideoFrame {
+    frame: *mut decklink_ffi::IDeckLinkVideoFrame,
+}
+
+impl DecklinkVideoFrameShared<'_> for DecklinkVideoFrame {
+    fn get_video_frame(&self) -> *mut decklink_ffi::IDeckLinkVideoFrame {
+        return self.frame as *mut decklink_ffi::IDeckLinkVideoFrame;
+    }
+}
+
+pub trait DecklinkVideoFrameShared<'a> {
     fn get_video_frame(&self) -> *mut decklink_ffi::IDeckLinkVideoFrame;
 
     fn get_ancillary_packets(&self) {
@@ -281,7 +308,7 @@ pub struct DecklinkInputVideoFrame {
     frame: *mut decklink_ffi::IDeckLinkVideoInputFrame,
 }
 
-impl DecklinkVideoFrame<'_> for DecklinkInputVideoFrame {
+impl DecklinkVideoFrameShared<'_> for DecklinkInputVideoFrame {
     fn get_video_frame(&self) -> *mut decklink_ffi::IDeckLinkVideoFrame {
         return self.frame as *mut decklink_ffi::IDeckLinkVideoFrame;
     }
@@ -291,7 +318,7 @@ pub struct DecklinkMutableVideoFrame {
     frame: *mut decklink_ffi::IDeckLinkMutableVideoFrame,
 }
 
-impl DecklinkVideoFrame<'_> for DecklinkMutableVideoFrame {
+impl DecklinkVideoFrameShared<'_> for DecklinkMutableVideoFrame {
     fn get_video_frame(&self) -> *mut decklink_ffi::IDeckLinkVideoFrame {
         return self.frame as *mut decklink_ffi::IDeckLinkVideoFrame;
     }
@@ -437,7 +464,7 @@ impl Drop for DeckLinkAncillaryPacket {
 
 pub struct DecklinkInput<'a> {
     input: *mut decklink_ffi::IDeckLinkInput,
-    callback: Option<*mut RustInputCallback<'a>>,
+    callback: Option<*mut crate::bridge::RustInputCallback<'a>>,
 }
 
 impl<'a> DecklinkInput<'a> {
@@ -505,7 +532,11 @@ impl<'a> DecklinkInput<'a> {
 impl Drop for DecklinkInput<'_> {
     fn drop(&mut self) {
         if let Some(callback) = self.callback {
-            unsafe { drop(Box::from_raw(callback as *mut RustInputCallback)) };
+            unsafe {
+                drop(Box::from_raw(
+                    callback as *mut crate::bridge::RustInputCallback,
+                ))
+            };
         }
         unsafe { decklink_ffi::Release(self.input as *mut decklink_ffi::IUnknown) }
     }

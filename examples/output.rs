@@ -25,7 +25,10 @@ fn main() {
     let mut output = device.get_output();
     output.enable_video_output(decklink_cxx::BMDDisplayMode::bmdModeHD1080p6000, 0);
 
-    output.set_scheduled_frame_completion_callback();
+    let callback = |frame| {
+        println!("FRAME");
+    };
+    output.set_scheduled_frame_completion_callback(callback);
 
     for i in 0..20 {
         let res = output.create_video_frame(

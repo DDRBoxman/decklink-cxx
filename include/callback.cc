@@ -37,7 +37,7 @@ CXXInputCallback* new_input_callback(RustInputCallback *callback) {
 }
 
 HRESULT CXXOutputCallback::ScheduledFrameCompleted(IDeckLinkVideoFrame* completedFrame, BMDOutputFrameCompletionResult result) {
-    this->callback->scheduled_frame_completed();
+    this->callback->scheduled_frame_completed(completedFrame);
     return S_OK;
 }
 
