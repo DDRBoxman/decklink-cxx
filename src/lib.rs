@@ -1,7 +1,7 @@
 mod bridge;
 
 use bridge::{
-    decklink_ffi::{self, IDeckLinkVideoFrame},
+    decklink_ffi::{self, ConversionFrame, IDeckLinkVideoFrame},
     decklink_type_wrappers::c_BMDDeckLinkAPIInformationID,
 };
 
@@ -629,14 +629,23 @@ impl DecklinkVideoConversion {
     pub fn convert_frame<'a>(
         &self,
         src_frame: &impl DecklinkVideoFrameShared<'a>,
-        width: i32,
-        height: i32,
-        row_bytes: i32,
-        pixel_format: BMDPixelFormat,
-    ) -> DecklinkVideoFrame {
+        dst_frame: &impl DecklinkVideoFrameShared<'a>,
+    ) {
         let pin: Pin<&mut decklink_ffi::IDeckLinkVideoConversion> =
             unsafe { Pin::new_unchecked(self.instance.as_mut().unwrap()) };
 
+        let res = unsafe {
+            pin.ConvertFrame(
+                src_frame.get_video_frame(),
+                dst_frame.get_video_frame(),
+            )
+        };
+    }
+
+    pub fn new_conversion_frame(&self,         width: i32,
+        height: i32,
+        row_bytes: i32,
+        pixel_format: BMDPixelFormat,) -> DecklinkVideoFrame {
         let new_frame = decklink_ffi::new_conversion_frame(
             crate::bridge::decklink_type_wrappers::c_long(width.into()),
             crate::bridge::decklink_type_wrappers::c_long(height.into()),
@@ -644,12 +653,6 @@ impl DecklinkVideoConversion {
             bridge::decklink_type_wrappers::c_BMDPixelFormat(pixel_format.repr),
         );
 
-        let res = unsafe {
-            pin.ConvertFrame(
-                src_frame.get_video_frame(),
-                new_frame as *mut IDeckLinkVideoFrame,
-            )
-        };
         return DecklinkVideoFrame {
             frame: new_frame as *mut IDeckLinkVideoFrame,
         };

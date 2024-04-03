@@ -15,6 +15,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("{}", device.get_name());
 
     let converter = decklink_cxx::DecklinkVideoConversion::new();
+    let dst_frame = converter.new_conversion_frame(1920, 1080, 1920*4, BMDPixelFormat::bmdFormat8BitBGRA);
 
     let mut input = device.get_input();
     input.enable_video_input(
@@ -24,9 +25,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     let callback = |frame: decklink_cxx::DecklinkInputVideoFrame| {
-        // This conversion is slow alternative needed
-        //let frame = converter.convert_frame(&frame, 1920, 1080, 1920*4, BMDPixelFormat::bmdFormat8BitBGRA);
-        let pixels = decklink_cxx::DecklinkVideoFrameShared::get_bytes(&frame);
+        converter.convert_frame(&frame, &dst_frame);
+        let pixels = decklink_cxx::DecklinkVideoFrameShared::get_bytes(&dst_frame);
         let image = ImageView::new(ImageInfo::bgra8(1920, 1080), pixels);
         window.set_image("image-001", image);
     };
