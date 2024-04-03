@@ -1,3 +1,5 @@
+#pragma once
+
 #ifdef _WIN32
 #include <decklink_win.h>
 #elif __APPLE__

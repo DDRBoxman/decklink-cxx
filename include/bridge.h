@@ -4,7 +4,8 @@ struct RustInputCallback;
 struct RustOutputCallback;
 
 #include "rust/cxx.h"
-#include "decklink-cxx/src/bridge.rs.h"
+#include "platform.h"
+#include "types.h"
 
 rust::String GetDisplayName(IDeckLink *deckLink);
 rust::String GetDisplayModeName(IDeckLinkDisplayMode *displayMode);
