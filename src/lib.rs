@@ -5,7 +5,7 @@ use bridge::{
     decklink_type_wrappers::c_BMDDeckLinkAPIInformationID,
 };
 
-use std::{pin::Pin, ptr};
+use std::{marker::PhantomData, pin::Pin, ptr};
 
 pub struct DecklinkAPIInformation {
     api_info: *mut decklink_ffi::IDeckLinkAPIInformation,
@@ -171,7 +171,7 @@ impl<'a> DecklinkOutput<'a> {
 
     pub fn schedule_video_frame(
         &mut self,
-        frame: DecklinkMutableVideoFrame,
+        frame: &DecklinkMutableVideoFrame,
         display_time: i64,
         display_duration: i64,
         time_scale: i64,
@@ -215,14 +215,15 @@ impl<'a> DecklinkOutput<'a> {
         };
     }
 
-    pub fn set_scheduled_frame_completion_callback(
-        &mut self,
-        mut frame_callback: impl FnMut(DecklinkVideoFrame) + 'a,
-    ) {
+    pub fn set_scheduled_frame_completion_callback<F>(&mut self, mut frame_callback: F)
+    where
+        F: FnMut() + 'a,
+    {
         let frame_completion_callback = move |frame: *mut decklink_ffi::IDeckLinkVideoFrame| {
-            let frame = DecklinkVideoFrame { frame };
+            // TODO: figue out how to pass this without drop calling release
+            //let frame = DecklinkVideoFrame { frame };
 
-            frame_callback(frame);
+            frame_callback();
         };
         let rust_callback = crate::bridge::RustOutputCallback::new(frame_completion_callback);
         let callback = Box::into_raw(Box::new(rust_callback));
@@ -363,7 +364,7 @@ impl<'a> DecklinkMutableVideoFrame {
                 data_ptr,
             )
         };
-        
+
         unsafe { ptr::copy_nonoverlapping(src.as_ptr(), data, len) };
     }
 }
@@ -634,18 +635,17 @@ impl DecklinkVideoConversion {
         let pin: Pin<&mut decklink_ffi::IDeckLinkVideoConversion> =
             unsafe { Pin::new_unchecked(self.instance.as_mut().unwrap()) };
 
-        let res = unsafe {
-            pin.ConvertFrame(
-                src_frame.get_video_frame(),
-                dst_frame.get_video_frame(),
-            )
-        };
+        let res =
+            unsafe { pin.ConvertFrame(src_frame.get_video_frame(), dst_frame.get_video_frame()) };
     }
 
-    pub fn new_conversion_frame(&self,         width: i32,
+    pub fn new_conversion_frame(
+        &self,
+        width: i32,
         height: i32,
         row_bytes: i32,
-        pixel_format: BMDPixelFormat,) -> DecklinkVideoFrame {
+        pixel_format: BMDPixelFormat,
+    ) -> DecklinkVideoFrame {
         let new_frame = decklink_ffi::new_conversion_frame(
             crate::bridge::decklink_type_wrappers::c_long(width.into()),
             crate::bridge::decklink_type_wrappers::c_long(height.into()),

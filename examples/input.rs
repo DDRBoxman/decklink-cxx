@@ -15,7 +15,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("{}", device.get_name());
 
     let converter = decklink_cxx::DecklinkVideoConversion::new();
-    let dst_frame = converter.new_conversion_frame(1920, 1080, 1920*4, BMDPixelFormat::bmdFormat8BitBGRA);
+    let dst_frame =
+        converter.new_conversion_frame(1920, 1080, 1920 * 4, BMDPixelFormat::bmdFormat8BitBGRA);
 
     let mut input = device.get_input();
     input.enable_video_input(
